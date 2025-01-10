@@ -5,6 +5,8 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.i18n import gettext as _
+from playwright.async_api import Download
+from .url import DownloadManager
 
 from loader import dp
 
@@ -18,14 +20,15 @@ async def help_command(message: types.Message, state: FSMContext) -> None:
             "<i>/start</i> - start using the bot\n"
             "<i>/help</i> - get a list of available commands\n"
             "<i>/settings</i> - bot settings\n\n"
+            "<i>/support</i> - for support me :3\n\n"
             "But that's just the beginning! I download media for you from anywhere! (even BiliBili)\n\n"
             "Let me list all the available sources for you:\n"
             "<b>Youtube</b> - I'll download videos, shorts, or music from videos for you! There's a 50 MB limit per video.\n"
             "<b>Soundcloud</b> - I'll download music, add the cover, title, and artist to make it all look perfect!\n"
             "<b>Spotify</b> - Similar functionality to Soundcloud, but for Spotify!\n"
             "<b>Apple Music</b> - Same here! Only beauty!\n"
-            "<b>TikTok</b> - I'll download videos for you. Photos are still in development.\n"
-            "<b>Pinterest</b> - I can download videos and photos for you (though why would you need the photos?).\n"
+            "<b>TikTok</b> - I'll download videos and images for you!\n"
+            "<b>Pinterest</b> - I can download videos and photos for you.\n"
             "<b>BiliBili</b> - It's a bit of a hassle, but I can send you videos.\n"
             "<b>Twitter</b> - I'll download videos and photos for you.\n"
             "<b>Instagram</b> - I'll download photos or Reels for you."
@@ -34,20 +37,11 @@ async def help_command(message: types.Message, state: FSMContext) -> None:
     )
 
 
-user_tasks = {}
-
 @dp.message(Command("cancel"))
 async def cancel_command(message: types.Message, state: FSMContext) -> None:
     user_id = message.from_user.id
-    if user_id in user_tasks:
-        task = user_tasks[user_id]
-        task.cancel()
-        try:
-            await task
-            await message.answer(_("Your download has been cancelled."))
-        except asyncio.CancelledError:
-            await message.answer(_("Download task was successfully cancelled."))
-        finally:
-            del user_tasks[user_id]
+    canceled = DownloadManager().cancel_task(user_id)
+    if canceled:
+        await message.answer(_("Your download has been cancelled."))
     else:
         await message.answer(_("No active download task found to cancel."))

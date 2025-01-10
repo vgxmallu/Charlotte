@@ -1,109 +1,211 @@
 import logging
-import re
 import asyncio
+from pathlib import Path
+from typing import List, Dict, Optional
 
-from aiogram import exceptions, types
-from aiogram.utils.i18n import gettext as _
+from aiogram import types, exceptions
+from aiogram.utils.media_group import MediaGroupBuilder
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from config.secrets import ADMIN_ID
-from .help import user_tasks
+from aiogram.enums import InputMediaType
+from aiogram.utils.i18n import gettext as _
 
-from downloaders import (
-    YouTubeDownloader,
-    AppleMusicDownloader,
-    BilibiliDownloader,
-    InstagramDownloader,
-    PinterestDownloader,
-    SoundCloudDownloader,
-    SpotifyDownloader,
-    TikTokDownloader,
-    TwitterDownloader,
-)
+from config.secrets import ADMIN_ID
 from filters.url_filter import UrlFilter
 from loader import dp
-from utils import (
-    delete_files,
-)
+from utils import delete_files, get_service_handler
+
+# Type aliases for better readability
+MediaContent = Dict[str, str]
+MediaList = List[MediaContent]
+user_tasks: Dict[int, asyncio.Task] = {}
+
+class DownloadManager:
+    async def is_user_downloading(self, user_id: int, message: types.Message) -> bool:
+        """Check if user already has an active download."""
+        if user_id in user_tasks:
+            await message.reply(_("You already have an active download. Cancel it with /cancel."))
+            return True
+        return False
+
+    def add_task(self, user_id: int, task: asyncio.Task) -> None:
+        """Add a download task for a user."""
+        user_tasks[user_id] = task
+
+    def remove_task(self, user_id: int) -> None:
+        """Remove a download task for a user."""
+        if user_id in user_tasks:
+            user_tasks.pop(user_id)
+
+    def cancel_task(self, user_id: int) -> bool:
+        """Cancel a download task for a user."""
+        print(user_tasks)
+        if user_id not in user_tasks:
+            return False  # No task to cancel
+
+        task = user_tasks[user_id]
+
+        if task and not task.done():
+            task.cancel()
+            self.remove_task(user_id)
+            return True
+        else:
+            return False
+
+download_manager = DownloadManager()
+
+class MediaHandler:
+    @staticmethod
+    async def send_media_content(message: types.Message, content: MediaList) -> None:
+        """Handle sending different types of media content."""
+        media_group = MediaGroupBuilder()
+        temp_medias = []
+        audio = None
+        has_video = False
+
+        for item in content:
+            media_path = Path(item["path"])
+            absolute_path = media_path.resolve()
+            temp_medias.append(absolute_path)
+
+            if item["type"] == "image":
+                media_group.add_photo(media=types.FSInputFile(absolute_path), type=InputMediaType.PHOTO)
+                has_video = True
+            elif item["type"] == "video":
+                media_group.add_video(media=types.FSInputFile(absolute_path), type=InputMediaType.VIDEO)
+                has_video = True
+            elif item["type"] == "audio":
+                audio = item
+
+        try:
+            if has_video:
+                await message.bot.send_chat_action(message.chat.id, "upload_video")
+                await message.answer_media_group(media=media_group.build(), disable_notification=True)
+
+            if audio:
+                await message.bot.send_chat_action(message.chat.id, "upload_voice")
+                await MediaHandler.send_audio(message, audio)
+        finally:
+            await delete_files(temp_medias)
+
+    @staticmethod
+    async def send_audio(message: types.Message, audio: Dict) -> None:
+        """Send audio file with or without cover."""
+        cover_path = audio.get("cover")
+        if cover_path:
+            cover_path = Path(cover_path)
+            absolute_cover_path = cover_path.resolve()
+
+            await message.answer_audio(
+                audio=types.FSInputFile(audio["path"]),
+                disable_notification=True,
+                thumbnail=types.FSInputFile(cover_path)
+            )
+
+            await delete_files([absolute_cover_path])
+        else:
+            await message.answer_audio(
+                audio=types.FSInputFile(audio["path"]),
+                disable_notification=True
+            )
+
+async def handle_download_error(message: types.Message, error: Exception) -> None:
+    """Handle various download errors and send appropriate messages."""
+    if isinstance(error, asyncio.CancelledError):
+        await message.answer(_("Download canceled."))
+    elif isinstance(error, exceptions.TelegramEntityTooLarge):
+        await message.answer(_("Critical error #022 - media file is too large"))
+    else:
+        logging.error(f"Download error: {error}")
+        await message.answer(_("Sorry, there was an error. Try again later 🧡"))
+        await message.bot.send_message(ADMIN_ID, f"Sorry, there was an error:\n {message.text}\n\n{error}")
 
 @dp.message(UrlFilter())
-async def url_handler(message: types.Message):
-    youtube_match = re.match(r'https?://(?:www\.)?(?:m\.)?(?:youtu\.be/|youtube\.com/(?:shorts/|watch\?v=))([\w-]+)', message.text)
-    if youtube_match:
+async def url_handler(message: types.Message) -> None:
+    """Handle incoming URL messages and manage downloads."""
+    if not message.from_user:
+        return
+
+    user_id = message.from_user.id
+    if await download_manager.is_user_downloading(user_id, message):
+        return
+
+    url = message.text
+    service = get_service_handler(url)
+
+    if service.name == "Youtube":  # Проверяем, что сервис — YouTube
         markup = InlineKeyboardBuilder()
-        markup.add(types.InlineKeyboardButton(text=_("Video"), callback_data="media"))
+        markup.add(types.InlineKeyboardButton(text=_("Video"), callback_data="video"))
         markup.add(types.InlineKeyboardButton(text=_("Audio"), callback_data="audio"))
-        await message.answer(message.text, reply_markup=markup.as_markup())
+
+        await message.reply("Выберите формат для скачивания:", reply_markup=markup.as_markup())
     else:
-        await download_handler(message, format="media")
+        # Для остальных сервисов выполняется стандартное скачивание
+        if service.is_playlist(url):
+            task = asyncio.create_task(handle_playlist_download(service, url, message))
+        else:
+            task = asyncio.create_task(handle_single_download(service, url, message))
+
+        download_manager.add_task(user_id, task)
 
 @dp.callback_query()
-async def handle_format_choice(callback_query: types.CallbackQuery):
+async def format_choice_handler(callback_query: types.CallbackQuery):
+    choice = callback_query.data
+    user_id = callback_query.from_user.id
+
+    url = callback_query.message.reply_to_message.text
+    service = get_service_handler(url)
+
+    if service.name != "Youtube":
+        await callback_query.message.edit_text(_("Формат выбора доступен только для YouTube."))
+        return
+
+    if choice == "video":
+        task = asyncio.create_task(handle_single_download(service, url, callback_query.message, format_choice=f"video:{user_id}"))
+    elif choice == "audio":
+        task = asyncio.create_task(handle_single_download(service, url, callback_query.message, format_choice=f"audio:{user_id}"))
+
+    download_manager.add_task(user_id, task)
     await callback_query.message.delete()
-    await download_handler(callback_query.message, format=callback_query.data)
 
 
-async def process_download(message: types.Message, download_func, format: str = "media", **kwargs):
+async def handle_single_download(service, url: str, message: types.Message, format_choice: Optional[str] = None) -> None:
+    """Handle download of a single media item."""
+    user_id = 0
+
     try:
-        if format == "media":
-            await message.bot.send_chat_action(message.chat.id, "record_video")
-            async for media_group, temp_medias in download_func(url=message.text, format="media", **kwargs):
-                if media_group is None or temp_medias is None:
-                    raise SomethingWrong()
-
-                await message.bot.send_chat_action(message.chat.id, "upload_video")
-                await message.answer_media_group(media=media_group.build())
-                await delete_files(temp_medias)
-
-        elif format == "audio":
-            await message.bot.send_chat_action(message.chat.id, "record_voice")
-            async for audio_filename, cover_filename in download_func(url=message.text, format="audio", **kwargs):
-                if audio_filename is None or cover_filename is None:
-                    raise SomethingWrong()
-
-                await message.bot.send_chat_action(message.chat.id, "upload_voice")
-                await message.answer_audio(
-                    audio=types.FSInputFile(audio_filename),
-                    thumbnail=types.FSInputFile(cover_filename),
-                    disable_notification=True
-                )
-                await delete_files([audio_filename, cover_filename])
-
-    except exceptions.TelegramEntityTooLarge:
-        await message.answer(_("Critical error #022 - media file is too large"))
-    except SomethingWrong:
-        await message.answer(_("Critical error #013 - something's wrong, I'm gonna go eat some cookies"))
-        await message.bot.send_message(ADMIN_ID, f"Sorry, there was an error:\n {message.text}")
-    except Exception as e:
-        logging.error(f"{e}")
-        await message.answer(_("Sorry, there was an error. Try again later 🧡"))
-        await message.bot.send_message(ADMIN_ID, f"Sorry, there was an error:\n {message.text}\n\n{e}")
-
-
-@dp.message(UrlFilter())
-async def download_handler(message: types.Message, format: str = "media"):
-    url_patterns = {
-        r'https?://(?:www\.)?(?:m\.)?(?:youtu\.be/|youtube\.com/(?:shorts/|watch\?v=))([\w-]+)': (YouTubeDownloader().download, None),
-        r"https:\/\/music\.youtube\.com\/(?:watch\?v=|playlist\?list=)([a-zA-Z0-9\-_]+)": (YouTubeDownloader().download, "audio"),
-        r"https?://vm.tiktok.com/": (TikTokDownloader().download, "media"),
-        r"https?://vt.tiktok.com/": (TikTokDownloader().download, "media"),
-        r"https?://(?:www\.)?tiktok\.com/.*": (TikTokDownloader().download, "media"),
-        r'https?://soundcloud\.com/([\w-]+)/([\w-]+)': (SoundCloudDownloader().download, "audio"),
-        r"https?://open\.spotify\.com/(track|playlist)/([\w-]+)": (SpotifyDownloader().download, "audio"),
-        r'https?://music\.apple\.com/.*/album/.+/\d+(\?.*)?$': (AppleMusicDownloader().download, "audio"),
-        r'https?://(?:\w{2,3}\.)?pinterest\.com/[\w/\-]+|https://pin\.it/[A-Za-z0-9]+': (PinterestDownloader().download, "media"),
-        r"https?://(?:www\.)?bilibili\.(?:com|tv)/[\w/?=&]+": (BilibiliDownloader().download, "media"),
-        r"https://(?:twitter|x)\.com/\w+/status/\d+": (TwitterDownloader().download, "media"),
-        r'https://www\.instagram\.com/(?:p|reel|tv|stories)/([A-Za-z0-9_-]+)/': (InstagramDownloader().download, "media"),
-    }
-
-    for pattern, (download_func, media_format) in url_patterns.items():
-        if media_format is not None:
-            format = media_format
-        if re.match(pattern, message.text):
-            task = asyncio.create_task(process_download(message, download_func, format))
-            user_tasks[message.from_user.id] = task
+        if service.name == "Youtube" and format_choice:
+            format, user_id = format_choice.split(":")
+            content = await service.download(url, format)
+            await MediaHandler.send_media_content(message, content)
             return
+        else:
+            await message.bot.send_chat_action(message.chat.id, "record_video")
+            user_id = message.from_user.id
+            content = await service.download(url)
+            await MediaHandler.send_media_content(message, content)
+    except Exception as e:
+        await handle_download_error(message, e)
+    finally:
+        download_manager.remove_task(int(user_id))
 
+async def handle_playlist_download(service, url: str, message: types.Message) -> None:
+    """Handle download of a playlist."""
+    try:
+        tracks = service.get_playlist_tracks(url)
+        for track in tracks:
+            if message.from_user.id not in user_tasks:
+                break
 
-class SomethingWrong(Exception):
-    pass
+            try:
+                await message.bot.send_chat_action(message.chat.id, "record_voice")
+                file = await service.download(track)
+                await MediaHandler.send_audio(message, file[0])
+                await delete_files([file[0]["path"], file[0]["cover"]])
+            except Exception:
+                continue
+
+        await message.reply("Скачивание завершено.")
+    except Exception as e:
+        await handle_download_error(message, e)
+    finally:
+        download_manager.remove_task(message.from_user.id)

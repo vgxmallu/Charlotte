@@ -43,8 +43,8 @@ async def get_applemusic_author(url: str):
                     return artist_name, track_title, best_image_url
                 else:
                     logging.error("Could not find the track title or artist name on the page.")
-                    return None, None
+                    return None, None, None
 
     except Exception as e:
         logging.error(f"Error getting Apple Music author: {str(e)}")
-        return None, None
+        return None, None, None
