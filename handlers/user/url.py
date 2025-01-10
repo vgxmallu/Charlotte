@@ -137,7 +137,7 @@ async def url_handler(message: types.Message) -> None:
         markup.add(types.InlineKeyboardButton(text=_("Video"), callback_data="video"))
         markup.add(types.InlineKeyboardButton(text=_("Audio"), callback_data="audio"))
 
-        await message.reply("Выберите формат для скачивания:", reply_markup=markup.as_markup())
+        await message.reply(_("Choose a format to download:"), reply_markup=markup.as_markup())
     else:
         # Для остальных сервисов выполняется стандартное скачивание
         if service.is_playlist(url):
@@ -156,7 +156,7 @@ async def format_choice_handler(callback_query: types.CallbackQuery):
     service = get_service_handler(url)
 
     if service.name != "Youtube":
-        await callback_query.message.edit_text(_("Формат выбора доступен только для YouTube."))
+        await callback_query.message.edit_text(_("The selection format is only available for YouTube."))
         return
 
     if choice == "video":
@@ -204,7 +204,7 @@ async def handle_playlist_download(service, url: str, message: types.Message) ->
             except Exception:
                 continue
 
-        await message.reply("Скачивание завершено.")
+        await message.reply(_("Download completed."))
     except Exception as e:
         await handle_download_error(message, e)
     finally:
