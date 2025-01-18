@@ -114,6 +114,8 @@ async def handle_download_error(message: types.Message, error: Exception) -> Non
         await message.answer(_("Download canceled."))
     elif isinstance(error, exceptions.TelegramEntityTooLarge):
         await message.answer(_("Critical error #022 - media file is too large"))
+    elif isinstance(error, ValueError) and str(error) == "Downloaded content is empty.":
+        await message.answer(_("Sorry, the download returned empty content. Please check the link and try again."))
     else:
         logging.error(f"Download error: {error}")
         await message.answer(_("Sorry, there was an error. Try again later 🧡"))
@@ -132,14 +134,13 @@ async def url_handler(message: types.Message) -> None:
     url = message.text
     service = get_service_handler(url)
 
-    if service.name == "Youtube":  # Проверяем, что сервис — YouTube
+    if service.name == "Youtube":
         markup = InlineKeyboardBuilder()
         markup.add(types.InlineKeyboardButton(text=_("Video"), callback_data="video"))
         markup.add(types.InlineKeyboardButton(text=_("Audio"), callback_data="audio"))
 
         await message.reply(_("Choose a format to download:"), reply_markup=markup.as_markup())
     else:
-        # Для остальных сервисов выполняется стандартное скачивание
         if service.is_playlist(url):
             task = asyncio.create_task(handle_playlist_download(service, url, message))
         else:
@@ -176,15 +177,19 @@ async def handle_single_download(service, url: str, message: types.Message, form
         if service.name == "Youtube" and format_choice:
             format, user_id = format_choice.split(":")
             content = await service.download(url, format)
-            await MediaHandler.send_media_content(message, content)
-            return
         else:
             await message.bot.send_chat_action(message.chat.id, "record_video")
             user_id = message.from_user.id
             content = await service.download(url)
-            await MediaHandler.send_media_content(message, content)
+
+        if not content:
+            raise ValueError("Downloaded content is empty.")
+
+        await MediaHandler.send_media_content(message, content)
+
     except Exception as e:
         await handle_download_error(message, e)
+
     finally:
         download_manager.remove_task(int(user_id))
 

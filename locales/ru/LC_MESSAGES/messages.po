@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-01-10 13:18+0100\n"
-"PO-Revision-Date: 2025-01-10 13:22+0100\n"
+"POT-Creation-Date: 2025-01-18 15:29+0100\n"
+"PO-Revision-Date: 2025-01-18 15:31+0100\n"
 "Last-Translator: \n"
 "Language-Team: ru <LL@li.org>\n"
 "Language: ru\n"
@@ -168,27 +168,35 @@ msgstr "Ваша загрузка была отменена."
 msgid "Critical error #022 - media file is too large"
 msgstr "Критическая ошибка #022 - медиафайл слишком большой"
 
-#: handlers/user/url.py:119
+#: handlers/user/url.py:118
+msgid ""
+"Sorry, the download returned empty content. Please check the link and try "
+"again."
+msgstr ""
+"Извините, при загрузке было получено пустое содержимое. Пожалуйста, проверьте "
+"ссылку и попробуйте снова."
+
+#: handlers/user/url.py:121
 msgid "Sorry, there was an error. Try again later 🧡"
 msgstr "Извините, произошла ошибка. Повторите попытку позже 🧡"
 
-#: handlers/user/url.py:137
+#: handlers/user/url.py:139
 msgid "Video"
 msgstr "Видео"
 
-#: handlers/user/url.py:138
+#: handlers/user/url.py:140
 msgid "Audio"
 msgstr "Аудио"
 
-#: handlers/user/url.py:140
+#: handlers/user/url.py:142
 msgid "Choose a format to download:"
 msgstr "Выберите формат для загрузки:"
 
-#: handlers/user/url.py:159
+#: handlers/user/url.py:160
 msgid "The selection format is only available for YouTube."
 msgstr "Формат выбора доступен только для YouTube."
 
-#: handlers/user/url.py:207
+#: handlers/user/url.py:212
 msgid "Download completed."
 msgstr "Загрузка завершена."
 

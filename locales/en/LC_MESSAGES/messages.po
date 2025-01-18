@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-01-10 13:18+0100\n"
+"POT-Creation-Date: 2025-01-18 15:29+0100\n"
 "PO-Revision-Date: 2024-09-03 21:37+0200\n"
 "Last-Translator: \n"
 "Language: en\n"
@@ -119,27 +119,33 @@ msgstr ""
 msgid "Critical error #022 - media file is too large"
 msgstr ""
 
-#: handlers/user/url.py:119
+#: handlers/user/url.py:118
+msgid ""
+"Sorry, the download returned empty content. Please check the link and try"
+" again."
+msgstr ""
+
+#: handlers/user/url.py:121
 msgid "Sorry, there was an error. Try again later 🧡"
 msgstr ""
 
-#: handlers/user/url.py:137
+#: handlers/user/url.py:139
 msgid "Video"
 msgstr ""
 
-#: handlers/user/url.py:138
+#: handlers/user/url.py:140
 msgid "Audio"
 msgstr ""
 
-#: handlers/user/url.py:140
+#: handlers/user/url.py:142
 msgid "Choose a format to download:"
 msgstr ""
 
-#: handlers/user/url.py:159
+#: handlers/user/url.py:160
 msgid "The selection format is only available for YouTube."
 msgstr ""
 
-#: handlers/user/url.py:207
+#: handlers/user/url.py:212
 msgid "Download completed."
 msgstr ""
 

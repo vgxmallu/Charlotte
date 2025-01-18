@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import logging
 
 from aiogram import F
 from aiogram.enums import ParseMode
@@ -11,6 +12,9 @@ from aiogram.types import (
     Message,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
+)
+from aiogram.exceptions import (
+    TelegramAPIError,TelegramBadRequest, TelegramNotFound, TelegramRetryAfter
 )
 from aiogram.utils.i18n import gettext as _
 
@@ -73,21 +77,36 @@ async def process_spam_news_to_chats(message: Message, state: FSMContext) -> Non
         await cursor.execute("SELECT DISTINCT chat_id FROM chat_settings")
         rows = await cursor.fetchall()
         total_chat = len(rows)
+        success_send = 0
 
         for row in rows:
             try:
                 if row[0] == chat_id:
                     continue
                 await asyncio.sleep(5)
-                await message.bot.send_message(row[0], message_text, parse_mode=ParseMode.MARKDOWN_V2)
-                sucсess_send += 1
+                await message.bot.send_message(
+                    row[0],
+                    message_text,
+                    parse_mode=ParseMode.MARKDOWN_V2
+                )
+                success_send += 1
+            except TelegramNotFound:
+                logging.error(f"Chat not found: {row[0]}")
+            except TelegramRetryAfter as e:
+                logging.warning(f"Retry after {e.retry_after} seconds")
+                await asyncio.sleep(e.retry_after)
+            except TelegramBadRequest as e:
+                logging.error(f"Telegram Bad Request: {e}")
+            except TelegramAPIError as e:
+                logging.error(f"Telegram API error: {e}")
             except Exception as e:
+                logging.error(f"Unexpected error: {e}")
+            finally:
                 error_send += 1
-                print(e)
 
     end_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    message = (
+    done_message = (
         _("The mailing has been completed\n"
         "Beginning at {start_time}\n"
         "Ended at {end_time}\n"
@@ -96,7 +115,7 @@ async def process_spam_news_to_chats(message: Message, state: FSMContext) -> Non
         "erros: {error_send}").format(start_time=start_time, end_time=end_time, total_chat=total_chat, sucсess_send=sucсess_send, error_send=error_send)
     )
 
-    await bot.send_message(chat_id=chat_id, text=message)
+    await bot.send_message(chat_id=chat_id, text=done_message)
 
 
 def escape_markdown(text: str) -> str:

@@ -27,8 +27,8 @@ class UrlFilter(BaseFilter):
             return any([
                 re.match(r'https?://(?:www\.)?(?:m\.)?(?:youtu\.be/|youtube\.com/(?:shorts/|watch\?v=))([\w-]+)', message.text),
                 re.match(r"https:\/\/music\.youtube\.com\/(?:watch\?v=|playlist\?list=)([a-zA-Z0-9\-_]+)", message.text),
-                re.match(r'https?://vm.tiktok.com/', message.text),
-                re.match(r'https?://(?:www\.)?tiktok\.com/.*', message.text),
+                re.match(r'https?://(?:www\.)?(?:tiktok\.com/.*|(vm|vt)\.tiktok\.com/.+)', message.text),
+                # re.match(r'https?://(?:www\.)?tiktok\.com/.*', message.text),
                 re.match(r'https?://soundcloud\.com/([\w-]+)/([\w-]+)', message.text),
                 re.match(r"https?://open\.spotify\.com/(track|playlist)/([\w-]+)", message.text),
                 re.match(r'https?://music\.apple\.com/.*/album/.+/\d+(\?.*)?$', message.text),
