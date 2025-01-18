@@ -18,20 +18,18 @@
 If you like this repository, feel free to leave a star ⭐ to motivate me improve!
 
 
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=Licomix&repo=Charlotte&theme=tokyonight)](https://github.com/Licomix/Charlotte)
+[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=JellyTyan&repo=Charlotte&theme=tokyonight)](https://github.com/JellyTyan/Charlotte)
 ## <img src="https://cdn.discordapp.com/emojis/852881450667081728.gif" width="20px" height="20px">》Features
 - [x] High speed
 - [x] Easy to use
 - [x] Customizable
-- [x] Supports many music services
+- [x] Supports many media services
 - [x] Friendly messages
 - [x] 4 languages support
-- [x] Admin panel
 
 <!-- REQUIREMENTS -->
 ## <img src="https://cdn.discordapp.com/emojis/1009754836314628146.gif" width="25px" height="25px">》Requirements
 - Python (optional)
-- Ffmpeg. [Tutorial](https://www.hostinger.com/tutorials/how-to-install-ffmpeg)
 - Telegram Bot Token. Get it from [BotFather](https://t.me/BotFather)
 - Spotify client ID `for Spotify support` [Click here to get](https://developer.spotify.com/dashboard/login)
 - Spotify client Secret `for Spotify support` [Click here to get](https://developer.spotify.com/dashboard/login)
@@ -60,7 +58,11 @@ source ./venv/bin/activate
 ```
 ### Install all dependents
 ```bash
-pip install - requierements.txt
+pip install -r requierements.txt
+```
+### Run this command for compiling languages
+```bash
+pybabel compile -d locales -D messages
 ```
 ### Run bot with
 ```bash

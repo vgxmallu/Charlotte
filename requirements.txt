@@ -14,3 +14,4 @@ beautifulsoup4~=4.12.3
 yarl~=1.18.3
 playwright~=1.49.1
 Pillow
+Babel
