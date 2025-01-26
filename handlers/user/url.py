@@ -57,15 +57,15 @@ class MediaHandler:
     @staticmethod
     async def send_media_content(message: types.Message, content: MediaList) -> None:
         """Handle sending different types of media content."""
-        media_group = MediaGroupBuilder()
         temp_medias = []
         audio = None
-        has_video = False
         gifs = []
+        media_items = []
+        caption = None
 
         for item in content:
             if item["type"] == "title":
-                media_group.caption = item["title"]
+                caption = item["title"]
                 continue
 
             media_path = Path(item["path"])
@@ -73,20 +73,33 @@ class MediaHandler:
             temp_medias.append(absolute_path)
 
             if item["type"] == "image":
-                media_group.add_photo(media=types.FSInputFile(absolute_path), type=InputMediaType.PHOTO)
-                has_video = True
+                media_items.append({"type": "photo", "path": absolute_path})
             elif item["type"] == "video":
-                media_group.add_video(media=types.FSInputFile(absolute_path), type=InputMediaType.VIDEO)
-                has_video = True
+                media_items.append({"type": "video", "path": absolute_path})
             elif item["type"] == "audio":
                 audio = item
+                continue
             elif item["type"] == "gif":
                 gifs.append(media_path)
+                continue
 
         try:
-            if has_video:
-                await message.bot.send_chat_action(message.chat.id, "upload_video")
-                await message.answer_media_group(media=media_group.build(), disable_notification=True)
+            # Split media items into groups of 10
+            for i in range(0, len(media_items), 10):
+                media_group = MediaGroupBuilder()
+                if caption and i == 0:  # Only add caption to first group
+                    media_group.caption = caption
+
+                group_items = media_items[i:i+10]
+                for item in group_items:
+                    if item["type"] == "photo":
+                        media_group.add_photo(media=types.FSInputFile(item["path"]), type=InputMediaType.PHOTO)
+                    elif item["type"] == "video":
+                        media_group.add_video(media=types.FSInputFile(item["path"]), type=InputMediaType.VIDEO)
+
+                if group_items:
+                    await message.bot.send_chat_action(message.chat.id, "upload_video")
+                    await message.answer_media_group(media=media_group.build(), disable_notification=True)
 
             if audio:
                 await message.bot.send_chat_action(message.chat.id, "upload_voice")
