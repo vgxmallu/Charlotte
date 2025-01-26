@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import urllib.request
+import json
 
 import aiohttp
 import yt_dlp
@@ -50,34 +51,55 @@ class PinterestService(BaseService):
         except Exception:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
-                    html = await response.text()
-                    status_code = response.status
+                    if response.status == 200:
+                        html = await response.text()
 
-                if status_code == 200:
-                    soup = BeautifulSoup(html, "html.parser")
-                    link = soup.find("img")
+                        soup = BeautifulSoup(html, "html.parser")
+                        link = soup.find("img")
 
-                    if link:
-                        content_url = link["src"]
+                        script_tag = soup.find_all("script", {"data-relay-response": "true", "type": "application/json"})
+                        if script_tag:
+                            json_data = json.loads(script_tag[1].string)  # Преобразуем строку в JSON
+                            pin_data = json_data["response"]["data"]["v3GetPinQuery"]["data"]
+                            if pin_data["carouselData"] and pin_data["carouselData"] is not None:
+                                for carosel in pin_data["carouselData"]["carouselSlots"]:
+                                    content_url = carosel["image736x"]["url"]
 
-                        parts = content_url.split("/")
-                        filename = parts[-1]
-                        file_path = os.path.join(self.output_path, filename)
-                        content_url = re.sub(r'/\d+x', '/originals', content_url)
+                                    parts = content_url.split("/")
+                                    filename = parts[-1]
+                                    file_path = os.path.join(self.output_path, filename)
+                                    content_url = re.sub(r'/\d+x', '/originals', content_url)
 
-                        try:
-                            urllib.request.urlretrieve(content_url, file_path)
-                        except Exception:
-                            content_url = re.sub(r'\.jpg$', '.png', content_url)
-                            urllib.request.urlretrieve(content_url, file_path)
+                                    await self._download_photo(content_url, file_path)
 
-                        result.append({"type": "image", "path": file_path})
+                                    result.append({"type": "image", "path": file_path})
+                            else:
+                                image_url = pin_data["image736x"]["url"]
+                                parts = image_url.split("/")
 
-                        return result
+                                filename = parts[-1]
+                                file_path = os.path.join(self.output_path, filename)
+                                image_url = re.sub(r'/\d+x', '/originals', image_url)
 
+                                await self._download_photo(image_url, file_path)
+
+                                result.append({"type": "image", "path": file_path})
+
+                            return result
+
+                        else:
+                            logging.error('Class "img" not found')
+                            return result
                     else:
-                        logging.error('Class "img" not found')
+                        logging.error(f"Error response status code {status_code}")
                         return result
+
+
+    async def _download_photo(self, url: str, filename: str) -> None:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    with open(filename, 'wb') as f:
+                        f.write(await response.read())
                 else:
-                    logging.error(f"Error response status code {status_code}")
-                    return result
+                    raise Exception(f"Failed to retrieve image. Status code: {response.status}")
