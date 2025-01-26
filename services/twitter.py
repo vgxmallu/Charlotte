@@ -4,16 +4,13 @@ import asyncio
 import logging
 import os
 import urllib.request
-
+from fake_useragent import UserAgent
 import yt_dlp
-from playwright.async_api import async_playwright
-
-semaphore = asyncio.Semaphore(3)
-
-browser_instance = None
+import aiohttp
 
 class TwitterService(BaseService):
     name = "Twitter"
+
     def __init__(self, output_path: str = "other/downloadsTemp"):
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
@@ -41,48 +38,66 @@ class TwitterService(BaseService):
                     result.append({"type": "video", "path": filename, "title": title})
 
         except yt_dlp.DownloadError:
-            async with semaphore:
-                try:
-                    async with async_playwright() as p:
-                        browser = await self._get_browser_instance(p)
+            try:
+                ua = UserAgent()
 
-                        page = await browser.new_page()
+                auth = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+                guest_token_url = "https://api.twitter.com/1.1/guest/activate.json"
 
-                        await page.route(
-                            "**/*",
-                            lambda route: route.abort() if route.request.resource_type in ["font", "stylesheet",
-                                                                                           "media"] else route.continue_()
-                        )
+                headers = {
+                    "Authorization": auth
+                }
 
-                        await page.goto(url)
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(guest_token_url, headers=headers) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            guest_token = data.get('guest_token')
+                        else:
+                            raise Exception(f"Failed to get guest token: response status {response.status}")
 
-                        await page.wait_for_selector('img[src*="/media/"]', timeout=5000)
+                match = re.search(r"status/(\d+)", url)
+                tweet_id = match.group(1)
 
-                        images = await page.eval_on_selector_all("img[src*='/media/']",
-                                                                 "imgs => imgs.map(img => img.src.split('&name')[0])")
-                        tweet_texts = await page.eval_on_selector_all(
-                            "div[data-testid='tweetText'] span",
-                            "spans => spans.map(span => span.innerText)"
-                        )
-                        full_text = " ".join(tweet_texts) if tweet_texts else ""
-                        title = f"{url.split('/')[3]} - {full_text}"
+                headers = {
+                    'Authorization': auth,
+                    'Content-Type': 'application/json',
+                    'User-Agent': ua.random,
+                    'X-Guest-Token': guest_token,
+                }
 
-                        for image in images:
-                            image = image.split("&name")[0]
-                            filename = os.path.join(self.output_path, self._sanitize_filename(f"{image.split('/')[-1]}.jpg"))
-                            try:
-                                urllib.request.urlretrieve(image, filename)
-                                result.append({"type": "image", "path": filename, "title": title})
-                            except Exception as e:
-                                print(f"Failed to download image {image}: {e}")
-                                continue
+                params = {
+                    'variables': f'{{"tweetId":"{tweet_id}","withCommunity":false,"includePromotedContent":false,"withVoice":false}}',
+                    'features': '{"creator_subscriptions_tweet_preview_api_enabled":true,"premium_content_api_read_enabled":false,"communities_web_enable_tweet_community_results_fetch":true,"c9s_tweet_anatomy_moderator_badge_enabled":true,"responsive_web_grok_analyze_button_fetch_trends_enabled":false,"responsive_web_grok_analyze_post_followups_enabled":false,"responsive_web_jetfuel_frame":false,"responsive_web_grok_share_attachment_enabled":true,"articles_preview_enabled":true,"responsive_web_edit_tweet_api_enabled":true,"graphql_is_translatable_rweb_tweet_is_translatable_enabled":true,"view_counts_everywhere_api_enabled":true,"longform_notetweets_consumption_enabled":true,"responsive_web_twitter_article_tweet_consumption_enabled":true,"tweet_awards_web_tipping_enabled":false,"creator_subscriptions_quote_tweet_preview_enabled":false,"freedom_of_speech_not_reach_fetch_enabled":true,"standardized_nudges_misinfo":true,"tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled":true,"rweb_video_timestamps_enabled":true,"longform_notetweets_rich_text_read_enabled":true,"longform_notetweets_inline_media_enabled":true,"profile_label_improvements_pcf_label_in_post_enabled":true,"rweb_tipjar_consumption_enabled":true,"responsive_web_graphql_exclude_directive_enabled":true,"verified_phone_label_enabled":false,"responsive_web_grok_image_annotation_enabled":true,"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false,"responsive_web_graphql_timeline_navigation_enabled":true,"responsive_web_enhance_cards_enabled":false}',
+                }
 
-                except Exception as e:
-                    print(f"Error downloading Twitter post: {str(e)}")
+                tweet_info_url = 'https://api.x.com/graphql/nYHwgVXy3Hse2O5okbpFiQ/TweetResultByRestId'
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(tweet_info_url, headers=headers, params=params) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            image_datas = data["data"]["tweetResult"]["result"]["legacy"]["entities"]["media"]
+                        else:
+                            raise Exception(f"Failed to get guest token: response status {response.status}")
 
-                finally:
-                    await self._close_browser()
+                for image_data in image_datas:
+                    image_url = image_data["media_url_https"]
 
+                    match = re.search(r"([^/]+\.jpg)", image_url)
+                    filename = self.output_path + "/" + match.group(1)
+
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(image_url) as response:
+                            if response.status == 200:
+                                with open(filename, 'wb') as f:
+                                    f.write(await response.read())
+                            else:
+                                raise Exception(f"Failed to retrieve image. Status code: {response.status}")
+
+                    result.append({"type": "image", "path": filename, "title": ""})
+
+            except Exception as e:
+                logging.error(f"Error downloading Twitter video: {str(e)}")
         except Exception as e:
             logging.error(f"Error downloading Twitter video: {str(e)}")
 
@@ -91,28 +106,3 @@ class TwitterService(BaseService):
     def _sanitize_filename(self, filename: str) -> str:
         # Удаляем символы, не подходящие для имени файла
         return re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', filename)
-
-
-    async def _get_browser_instance(self, playwright):
-        global browser_instance
-        if not browser_instance:
-            browser_instance = await playwright.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--ignore-certificate-errors",
-                    "--disable-gpu",
-                    "--log-level=3",
-                    "--disable-notifications",
-                    "--disable-popup-blocking",
-                ]
-            )
-        return browser_instance
-
-
-    async def _close_browser(self) -> None:
-        global browser_instance
-        if browser_instance:
-            await browser_instance.close()
-            browser_instance = None
