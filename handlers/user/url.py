@@ -61,8 +61,13 @@ class MediaHandler:
         temp_medias = []
         audio = None
         has_video = False
+        gifs = []
 
         for item in content:
+            if item["type"] == "title":
+                media_group.caption = item["title"]
+                continue
+
             media_path = Path(item["path"])
             absolute_path = media_path.resolve()
             temp_medias.append(absolute_path)
@@ -75,6 +80,8 @@ class MediaHandler:
                 has_video = True
             elif item["type"] == "audio":
                 audio = item
+            elif item["type"] == "gif":
+                gifs.append(media_path)
 
         try:
             if has_video:
@@ -84,6 +91,10 @@ class MediaHandler:
             if audio:
                 await message.bot.send_chat_action(message.chat.id, "upload_voice")
                 await MediaHandler.send_audio(message, audio)
+
+            for gif in gifs:
+                await message.bot.send_chat_action(message.chat.id, "upload_video")
+                await message.answer_animation(animation=types.FSInputFile(gif), disable_notification=True)
         finally:
             await delete_files(temp_medias)
 
