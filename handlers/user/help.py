@@ -1,11 +1,8 @@
-import asyncio
-
 from aiogram import types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.i18n import gettext as _
-from playwright.async_api import Download
 from .url import DownloadManager
 
 from loader import dp
