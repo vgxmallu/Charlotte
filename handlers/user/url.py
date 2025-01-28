@@ -100,6 +100,7 @@ class MediaHandler:
                 if group_items:
                     await message.bot.send_chat_action(message.chat.id, "upload_video")
                     await message.answer_media_group(media=media_group.build(), disable_notification=True)
+                    await asyncio.sleep(1)
 
             if audio:
                 await message.bot.send_chat_action(message.chat.id, "upload_voice")
