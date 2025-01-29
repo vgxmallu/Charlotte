@@ -5,6 +5,7 @@ import json
 from typing import Dict, Any
 import aiofiles
 import aiohttp
+from ffmpeg.asyncio import FFmpeg
 
 from .base_service import BaseService
 
@@ -30,16 +31,25 @@ class PinterestService(BaseService):
                 url = str(link.url)
 
         try:
-            parts = url.split("/")
-            post_id = parts[-3]
+            match = re.search(r'/pin/(\d+)', url)
+            if match:
+                post_id = match.group(1)
+            else:
+                logging.error(f"Не удалось извлечь post_id из URL: {url}")
+                return result
 
             post_dict = await self._get_pin_info(int(post_id))
             image_signature = post_dict["image_signature"]
 
             if post_dict["ext"] == "mp4":
                 video_url = post_dict["video"]
-                filename = os.path.join(self.output_path, f"{image_signature}.mp4")
-                await self._download_video(video_url, filename)
+                if video_url.endswith(".m3u8"):
+                    filename = os.path.join(self.output_path, f"{image_signature}.mp4")
+                    await self._download_m3u8_video(video_url, filename)
+                else:
+                    filename = os.path.join(self.output_path, f"{image_signature}.mp4")
+                    await self._download_video(video_url, filename)
+
                 result.append({"type": "video", "path": filename})
             elif post_dict["ext"] == "carousel":
                 carousel_data = post_dict["carousel_data"]
@@ -57,6 +67,9 @@ class PinterestService(BaseService):
                     filename = os.path.join(self.output_path, f"{image_signature}.jpg")
                     await self._download_photo(image_url, filename)
                     result.append({"type": "image", "path": filename})
+            else:
+                logging.error(f"No media: {post_dict}")
+                return result
 
             result.append({"type": "title", "title": post_dict["title"]})
 
@@ -75,8 +88,6 @@ class PinterestService(BaseService):
             async with session.get(url, params=query) as response:
                 if response.status == 200:
                     response_json = await response.json()
-                    with open("temp.json", "w") as f:
-                        json.dump(response_json, f, indent=4)
                 else:
                     raise Exception(f"Failed to retrieve image. Status code: {response.status}")
 
@@ -128,10 +139,9 @@ class PinterestService(BaseService):
             isinstance(root["videos"].get("video_list"), dict)
         ):
             video_list = root["videos"]["video_list"]
-            video_data = video_list.get("V_EXP7") or video_list.get("V_720P")
+            video = self._get_best_video(video_list)
 
-            if video_data:
-                video = video_data["url"]
+            if video:
                 ext = "mp4"
 
         elif (
@@ -195,8 +205,28 @@ class PinterestService(BaseService):
             logging.error(f"Ошибка загрузки видео: {e}")
 
     def _get_best_video(self, video_list):
-        video_qualities = ["V_EXP7", "V_720P", "V_480P", "V_360P"]
+        video_qualities = ["V_EXP7", "V_720P", "V_480P", "V_360P", "V_HLSV3_MOBILE"]
         for quality in video_qualities:
             if quality in video_list:
                 return video_list[quality]["url"]
         return None
+
+    async def _download_m3u8_video(self, url: str, filename: str) -> None:
+        print("process")
+        try:
+            ffmpeg = (
+                FFmpeg()
+                .option("y")
+                .input(url)
+                .output(
+                    filename,
+                    {"codec:v": "libx264"},
+                    vf="scale=1280:-1",
+                    preset="veryslow",
+                    crf=24,
+                )
+            )
+
+            await ffmpeg.execute()
+        except Exception as e:
+            logging.error(f"Ошибка при скачивании видео из m3u8: {e}")

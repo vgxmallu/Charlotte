@@ -16,3 +16,4 @@ fake-useragent==2.0.3
 Pillow==11.1.0
 Babel
 PyTTSave==1.0.0
+python-ffmpeg
