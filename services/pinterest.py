@@ -44,8 +44,9 @@ class PinterestService(BaseService):
             if post_dict["ext"] == "mp4":
                 video_url = post_dict["video"]
                 if video_url.endswith(".m3u8"):
-                    filename = os.path.join(self.output_path, f"{image_signature}.mp4")
-                    await self._download_m3u8_video(video_url, filename)
+                    # filename = os.path.join(self.output_path, f"{image_signature}.mp4")
+                    # await self._download_m3u8_video(video_url, filename)
+                    raise ValueError("Blyat, denzuj")
                 else:
                     filename = os.path.join(self.output_path, f"{image_signature}.mp4")
                     await self._download_video(video_url, filename)
