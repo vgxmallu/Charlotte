@@ -1,12 +1,10 @@
-import asyncio
 import logging
 import os
 import re
 import json
-
+from typing import Dict, Any
+import aiofiles
 import aiohttp
-import yt_dlp
-from bs4 import BeautifulSoup
 
 from .base_service import BaseService
 
@@ -33,87 +31,172 @@ class PinterestService(BaseService):
 
         try:
             parts = url.split("/")
-            filename = parts[-3]
-            options = {
-                "outtmpl": f"{self.output_path}/{filename}.%(ext)s",
-            }
+            post_id = parts[-3]
 
-            with yt_dlp.YoutubeDL(options) as ydl:
-                info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
-                ext = info_dict["ext"]
-                file_path = ydl.prepare_filename(info_dict)
-                await asyncio.to_thread(ydl.download, [url])
+            post_dict = await self._get_pin_info(int(post_id))
+            image_signature = post_dict["image_signature"]
 
-                if ext == "gif":
-                    result.append({"type": "gif", "path": file_path})
+            if post_dict["ext"] == "mp4":
+                video_url = post_dict["video"]
+                filename = os.path.join(self.output_path, f"{image_signature}.mp4")
+                await self._download_video(video_url, filename)
+                result.append({"type": "video", "path": filename})
+            elif post_dict["ext"] == "carousel":
+                carousel_data = post_dict["carousel_data"]
+                for i, image_url in enumerate(carousel_data):
+                    filename = os.path.join(self.output_path, f"{image_signature}_{i}.jpg")
+                    await self._download_photo(image_url, filename)
+                    result.append({"type": "image", "path": filename})
+            elif post_dict["ext"] == "jpg":
+                image_url = post_dict["image"]
+                if image_url.endswith(".gif"):
+                    filename = os.path.join(self.output_path, f"{image_signature}.gif")
+                    await self._download_video(image_url, filename)
+                    result.append({"type": "gif", "path": filename})
                 else:
-                    result.append({"type": "video", "path": file_path})
+                    filename = os.path.join(self.output_path, f"{image_signature}.jpg")
+                    await self._download_photo(image_url, filename)
+                    result.append({"type": "image", "path": filename})
+
+            result.append({"type": "title", "title": post_dict["title"]})
 
             return result
 
-        except Exception:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        html = await response.text()
+        except Exception as e:
+            logging.error(f"Failed to download Pinterest: {e}")
+            return result
 
-                        soup = BeautifulSoup(html, "html.parser")
-                        link = soup.find("img")
+    async def _get_pin_info(self, pin_id: int) -> Dict[str, Any]:
+        url = 'https://www.pinterest.com/resource/PinResource/get/'
+        options = {'field_set_key': 'unauth_react_main_pin', 'id': f'{pin_id}'}
+        query = {'data': json.dumps({'options': options})}
 
-                        script_tag = soup.find_all("script", {"data-relay-response": "true", "type": "application/json"})
-                        if script_tag:
-                            json_data = json.loads(script_tag[1].string)  # Преобразуем строку в JSON
-                            pin_data = json_data["response"]["data"]["v3GetPinQuery"]["data"]
-                            if pin_data["carouselData"] and pin_data["carouselData"] is not None:
-                                for carosel in pin_data["carouselData"]["carouselSlots"]:
-                                    content_url = carosel["image736x"]["url"]
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=query) as response:
+                if response.status == 200:
+                    response_json = await response.json()
+                    with open("temp.json", "w") as f:
+                        json.dump(response_json, f, indent=4)
+                else:
+                    raise Exception(f"Failed to retrieve image. Status code: {response.status}")
 
-                                    parts = content_url.split("/")
-                                    filename = parts[-1]
-                                    file_path = os.path.join(self.output_path, filename)
+        root = response_json["resource_response"]["data"]
 
-                                    await self._download_photo(content_url, file_path)
+        title = root['title']
+        image_signature = root["image_signature"]
+        ext = ""
+        carousel_data = None
+        video = None
+        image = None
 
-                                    result.append({"type": "image", "path": file_path})
-                            else:
-                                image_url = pin_data["image736x"]["url"]
-                                parts = image_url.split("/")
+        if root.get("carousel_data"):  # Проверяем наличие ключа
+            carousel = root["carousel_data"]["carousel_slots"]
+            carousel_data = []
+            for carousel_element in carousel:
+                image_url = carousel_element["images"]["736x"]["url"]
+                carousel_data.append(image_url)
+            ext = "carousel"
 
-                                filename = parts[-1]
-                                file_path = os.path.join(self.output_path, filename)
-                                image_url = re.sub(r'/\d+x', '/originals', image_url)
+        elif (
+            isinstance(root.get("story_pin_data"), dict) and
+            isinstance(root["story_pin_data"].get("pages"), list) and
+            len(root["story_pin_data"]["pages"]) > 0 and
+            isinstance(root["story_pin_data"]["pages"][0].get("blocks"), list) and
+            len(root["story_pin_data"]["pages"][0]["blocks"]) > 0 and
+            isinstance(root["story_pin_data"]["pages"][0]["blocks"][0], dict) and
+            isinstance(root["story_pin_data"]["pages"][0]["blocks"][0].get("video"), dict) and
+            isinstance(root["story_pin_data"]["pages"][0]["blocks"][0]["video"].get("video_list"), dict)
+        ):
+            video_list = root["story_pin_data"]["pages"][0]["blocks"][0]["video"]["video_list"]
+            video = self._get_best_video(video_list)
 
-                                await self._download_photo(image_url, file_path)
+            if video:
+                ext = "mp4"
 
-                                result.append({"type": "image", "path": file_path})
+        elif (
+            isinstance(root.get("videos"), dict) and
+            isinstance(root["videos"].get("video_list"), dict)
+        ):
+            video_list = root["videos"]["video_list"]
+            video = self._get_best_video(video_list)
 
-                            return result
+            if video:
+                ext = "mp4"
 
-                        else:
-                            logging.error('Class "img" not found')
-                            return result
-                    else:
-                        logging.error(f"Error response status code {response.status}")
-                        return result
+        elif (
+            isinstance(root.get("videos"), dict) and
+            isinstance(root["videos"].get("video_list"), dict)
+        ):
+            video_list = root["videos"]["video_list"]
+            video_data = video_list.get("V_EXP7") or video_list.get("V_720P")
 
+            if video_data:
+                video = video_data["url"]
+                ext = "mp4"
+
+        elif (
+            isinstance(root.get("images"), dict) and
+            isinstance(root["images"].get("orig"), dict) and
+            "url" in root["images"]["orig"]
+        ):
+            image = root["images"]["orig"]["url"]
+            ext = "jpg"
+
+        else:
+            logging.error(f"Unknown Pinterest type. Pin id{pin_id}")
+
+        data = {
+            "title": title,
+            "image_signature": image_signature,
+            "ext": ext,
+            "carousel_data": carousel_data,
+            "video": video,
+            "image": image
+        }
+
+        return data
 
     async def _download_photo(self, url: str, filename: str) -> None:
         try:
             content_url = re.sub(r'/\d+x', '/originals', url)
             async with aiohttp.ClientSession() as session:
                 async with session.get(content_url) as response:
-                    if response.status == 200:
-                        with open(filename, 'wb') as f:
-                            f.write(await response.read())
+                    response_status = response.status
+                    if response_status == 200:
+                        async with aiofiles.open(filename, 'wb') as f:
+                            await f.write(await response.read())
+                        return
+
+            if response_status == 403:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            async with aiofiles.open(filename, 'wb') as f:
+                                await f.write(await response.read())
                             return
-                    else:
-                        raise Exception(f"Failed to retrieve image. Status code: {response.status}")
-        except Exception:
+                        else:
+                            raise Exception(f"Failed to retrieve image. Status code: {response.status}")
+        except Exception as e:
+            logging.error(f"Failed to retrieve image: {url}. {e}")
+
+    async def _download_video(self, url: str, filename: str) -> None:
+        try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
-                    if response.status == 200:
-                        with open(filename, 'wb') as f:
-                            f.write(await response.read())
-                            return
-                    else:
-                        raise Exception(f"Failed to retrieve image. Status code: {response.status}")
+                    content_length = response.headers.get('Content-Length')
+                    if content_length and int(content_length) > 50 * 1024 * 1024:
+                        logging.warning(f"Файл {filename} слишком большой (>50MB).")
+                        return
+
+                    async with aiofiles.open(filename, 'wb') as f:
+                        async for chunk in response.content.iter_chunked(1024):
+                            await f.write(chunk)
+        except Exception as e:
+            logging.error(f"Ошибка загрузки видео: {e}")
+
+    def _get_best_video(self, video_list):
+        video_qualities = ["V_EXP7", "V_720P", "V_480P", "V_360P"]
+        for quality in video_qualities:
+            if quality in video_list:
+                return video_list[quality]["url"]
+        return None

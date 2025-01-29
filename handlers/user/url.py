@@ -12,7 +12,7 @@ from aiogram.utils.i18n import gettext as _
 from config.secrets import ADMIN_ID
 from filters.url_filter import UrlFilter
 from loader import dp
-from utils import delete_files, get_service_handler
+from utils import delete_files, get_service_handler, truncate_string
 
 # Type aliases for better readability
 MediaContent = Dict[str, str]
@@ -65,7 +65,7 @@ class MediaHandler:
 
         for item in content:
             if item["type"] == "title":
-                caption = item["title"]
+                caption = truncate_string(item["title"])
                 continue
 
             media_path = Path(item["path"])
@@ -87,7 +87,7 @@ class MediaHandler:
             # Split media items into groups of 10
             for i in range(0, len(media_items), 10):
                 media_group = MediaGroupBuilder()
-                if caption and i == 0:  # Only add caption to first group
+                if caption and i == 0:
                     media_group.caption = caption
 
                 group_items = media_items[i:i+10]

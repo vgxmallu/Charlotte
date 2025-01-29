@@ -12,7 +12,6 @@ class UrlFilter(BaseFilter):
         - SoundCloud (track URLs)
         - Spotify (track URLs)
         - Apple Music (album URLs)
-        - Deezer (page URLs)
         - Pinterest (pins and board URLs)
         - Bilibili (video URLs)
         - Twitter/X (status URLs)

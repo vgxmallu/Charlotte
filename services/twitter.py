@@ -1,16 +1,14 @@
-import json
-
-from yt_dlp.extractor import rai
-from .base_service import BaseService
-import re
-import asyncio
 import logging
 import os
-import urllib.request
-from fake_useragent import UserAgent
-import yt_dlp
+import re
+from typing import Any, Dict
+
+import aiofiles
 import aiohttp
-from typing import Dict, Any
+from fake_useragent import UserAgent
+
+from .base_service import BaseService
+
 ua = UserAgent()
 
 class TwitterService(BaseService):
@@ -128,8 +126,8 @@ class TwitterService(BaseService):
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status == 200:
-                    with open(filename, 'wb') as f:
-                        f.write(await response.read())
+                    async with aiofiles.open(filename, 'wb') as f:
+                        await f.write(await response.read())
                 else:
                     raise Exception(f"Failed to retrieve image. Status code: {response.status}")
 
@@ -138,21 +136,15 @@ class TwitterService(BaseService):
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     content_length = response.headers.get('Content-Length')
-                    if content_length:
-                        content_length = int(content_length)
-                        max_size_bytes = 50 * 1024 * 1024  # Переводим в байты
-                        if content_length > max_size_bytes:
-                            print(f"File size exceeds {50} MB. Download stopped.")
-                            raise ValueError("File is too big")
+                    if content_length and int(content_length) > 50 * 1024 * 1024:
+                        logging.warning(f"Файл {filename} слишком большой (>50MB).")
+                        return
 
-                    with open(filename, 'wb') as f:
-                        while True:
-                            chunk = await response.content.read(1024)
-                            if not chunk:
-                                break
-                            f.write(chunk)
+                    async with aiofiles.open(filename, 'wb') as f:
+                        async for chunk in response.content.iter_chunked(1024):
+                            await f.write(chunk)
         except Exception as e:
-            logging.error(f"Error downloading Twitter video: {str(e)}")
+            logging.error(f"Ошибка загрузки видео: {e}")
 
     def _sanitize_filename(self, filename: str) -> str:
         # Удаляем символы, не подходящие для имени файла
