@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import re
-import urllib.request
 import json
 
 import aiohttp
@@ -41,10 +40,14 @@ class PinterestService(BaseService):
 
             with yt_dlp.YoutubeDL(options) as ydl:
                 info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
+                ext = info_dict["ext"]
                 file_path = ydl.prepare_filename(info_dict)
                 await asyncio.to_thread(ydl.download, [url])
 
-                result.append({"type": "video", "path": file_path})
+                if ext == "gif":
+                    result.append({"type": "gif", "path": file_path})
+                else:
+                    result.append({"type": "video", "path": file_path})
 
             return result
 
@@ -68,7 +71,6 @@ class PinterestService(BaseService):
                                     parts = content_url.split("/")
                                     filename = parts[-1]
                                     file_path = os.path.join(self.output_path, filename)
-                                    content_url = re.sub(r'/\d+x', '/originals', content_url)
 
                                     await self._download_photo(content_url, file_path)
 
@@ -91,15 +93,27 @@ class PinterestService(BaseService):
                             logging.error('Class "img" not found')
                             return result
                     else:
-                        logging.error(f"Error response status code {status_code}")
+                        logging.error(f"Error response status code {response.status}")
                         return result
 
 
     async def _download_photo(self, url: str, filename: str) -> None:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    with open(filename, 'wb') as f:
-                        f.write(await response.read())
-                else:
-                    raise Exception(f"Failed to retrieve image. Status code: {response.status}")
+        try:
+            content_url = re.sub(r'/\d+x', '/originals', url)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(content_url) as response:
+                    if response.status == 200:
+                        with open(filename, 'wb') as f:
+                            f.write(await response.read())
+                            return
+                    else:
+                        raise Exception(f"Failed to retrieve image. Status code: {response.status}")
+        except Exception:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        with open(filename, 'wb') as f:
+                            f.write(await response.read())
+                            return
+                    else:
+                        raise Exception(f"Failed to retrieve image. Status code: {response.status}")
