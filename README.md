@@ -6,17 +6,18 @@
     <img src=".github/assets/suzu.png" alt="Suzu from Sewayaki Kitsune No Senko-San">
   </p>
   <p align="center">
-    Charlotte is a handy Telegram bot that allows you to download video and audio from many popular resources. With the help of this bot, you can quickly and easily get the desired media file by simply sending a link to it in chat with the bot.
+    <a href="https://t.me/ZefirkaFox_Bot">Charlotte</a> is a handy Telegram bot that allows you to download video and audio from many popular resources. With the help of this bot, you can quickly and easily get the desired media file by simply sending a link to it in chat with the bot.
     <br />
     <br />
     <a href="https://github.com/Licomix/Charlotte/issues">Report Bug</a>
     ·
     <a href="https://github.com/Licomix/Charlotte/issues">Request Feature</a>
+    ·
+    <a href="https://t.me/ZefirkaFox_Bot">Use For Free</a>
   </p>
 </div>
 
 If you like this repository, feel free to leave a star ⭐ to motivate me improve!
-
 
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=JellyTyan&repo=Charlotte&theme=tokyonight)](https://github.com/JellyTyan/Charlotte)
 ## <img src="https://cdn.discordapp.com/emojis/852881450667081728.gif" width="20px" height="20px">》Features
