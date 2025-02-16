@@ -4,6 +4,7 @@ import re
 from typing import Any, Dict
 
 import aiofiles
+from aiogram.types import file
 import aiohttp
 from fake_useragent import UserAgent
 
@@ -33,6 +34,8 @@ class TwitterService(BaseService):
         result = []
         try:
             match = re.search(r"status/(\d+)", url)
+            if match is None:
+                raise ValueError("No tweet id found")
             tweet_id = int(match.group(1))
 
             tweet_dict = await self._get_tweet_info(tweet_id)
@@ -42,7 +45,9 @@ class TwitterService(BaseService):
             for media in medias:
                 if media["type"] == "photo":
                     photo_url = media["media_url_https"]
-                    match = re.search(r"([^/]+\.jpg)", photo_url)
+                    match = re.search(r"([^/]+\.(?:jpg|jpeg|png))", photo_url, re.IGNORECASE)
+                    if match is None:
+                        continue
                     filename = self.output_path + "/" + match.group(1)
 
                     await self._download_photo(photo_url, filename)
@@ -59,6 +64,8 @@ class TwitterService(BaseService):
                     video_url = video_with_highest_bitrate["url"]
 
                     match = re.search(r"([^/]+\.mp4)", video_url)
+                    if match is None:
+                        continue
                     filename = self.output_path + "/" + match.group(1)
 
                     await self._download_video(video_url, filename)
@@ -70,6 +77,8 @@ class TwitterService(BaseService):
                     video_url = variant["url"]
 
                     match = re.search(r"([^/]+\.mp4)", video_url)
+                    if match is None:
+                        continue
                     filename = self.output_path + "/" + match.group(1)
 
                     await self._download_video(video_url, filename)

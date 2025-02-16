@@ -3,13 +3,17 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.i18n import gettext as _
-from .url import DownloadManager
+from .url import TaskManager
 
 from loader import dp
 
 
 @dp.message(Command("help"))
 async def help_command(message: types.Message, state: FSMContext) -> None:
+    user = message.from_user
+    if user is None:
+        return
+
     await message.answer(
         _(
             "<b>Hey, {name}! You've reached out for help!</b>\n"
@@ -29,15 +33,18 @@ async def help_command(message: types.Message, state: FSMContext) -> None:
             "<b>BiliBili</b> - It's a bit of a hassle, but I can send you videos.\n"
             "<b>Twitter</b> - I'll download videos and photos for you.\n"
             "<b>Instagram</b> - I'll download photos or Reels for you."
-        ).format(name=message.from_user.first_name),
+        ).format(name=user.first_name or user.username),
         parse_mode=ParseMode.HTML,
     )
 
 
 @dp.message(Command("cancel"))
 async def cancel_command(message: types.Message, state: FSMContext) -> None:
-    user_id = message.from_user.id
-    canceled = DownloadManager().cancel_task(user_id)
+    user = message.from_user
+    if user is None:
+        return
+
+    canceled = TaskManager().cancel_task(user.id)
     if canceled:
         await message.answer(_("Your download has been cancelled."))
     else:
