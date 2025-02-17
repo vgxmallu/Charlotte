@@ -4,21 +4,14 @@ import os
 import re
 import urllib.request
 
-import spotipy
 import yt_dlp
-from spotipy.oauth2 import SpotifyClientCredentials
 from yt_dlp.utils import sanitize_filename
 
-from config.secrets import SPOTIFY_CLIENT_ID, SPOTIFY_SECRET
-from utils import get_spotify_author, search_music, update_metadata
+import aiohttp
+
+from utils import get_spotify_author, search_music, update_metadata, get_access_token
 
 from .base_service import BaseService
-
-auth_manager = SpotifyClientCredentials(
-    client_id=SPOTIFY_CLIENT_ID, client_secret=SPOTIFY_SECRET
-)
-spotify = spotipy.Spotify(auth_manager=auth_manager)
-
 
 class SpotifyService(BaseService):
     name = "Spotify"
@@ -62,13 +55,17 @@ class SpotifyService(BaseService):
             await asyncio.to_thread(ydl.download, [video_link])
 
             audio_filename = os.path.join(self.output_path, f"{sanitize_filename(ydl_title)}.mp3")
-            cover_filename = os.path.join(self.output_path, f"{sanitize_filename(ydl_title)}.jpg")
 
-            urllib.request.urlretrieve(cover_url, cover_filename)
+            if cover_url:
+                cover_filename  = os.path.join(self.output_path, f"{sanitize_filename(ydl_title)}.jpg")
+                urllib.request.urlretrieve(cover_url, cover_filename)
+            else:
+                cover_filename = None
+            assert cover_filename, "Cover URL is not available"
 
             update_metadata(audio_filename, artist=artist, title=title, cover_file=cover_filename)
 
-            if os.path.exists(audio_filename) and os.path.exists(cover_filename):
+            if os.path.exists(audio_filename) or os.path.exists(cover_filename):
                 result.append({"type": "audio", "path": audio_filename, "cover": cover_filename})
             return result
 
@@ -76,36 +73,34 @@ class SpotifyService(BaseService):
             logging.error(f"Error downloading YouTube Audio: {str(e)}")
             return result
 
-    def get_playlist_tracks(self, url: str) -> list[str]:
+    async def get_playlist_tracks(self, url: str) -> list[str]:
+        tracks = []
+        offset = 0
+
         match = re.search(r"playlist/([^/?]+)", url)
         if not match:
             logging.error(f"Invalid playlist URL: {url}")
             return []
 
-        playlist_id = match.group(1)
-        all_tracks = []
-        offset = 0
-        limit = 100
+        try:
+            async with aiohttp.ClientSession() as session:
+                token = await get_access_token(session)
+                if not token:
+                    return []
 
-        while True:
-            try:
-                results = spotify.playlist_items(playlist_id, limit=limit, offset=offset)
-                tracks = results["items"]
-                all_tracks.extend(tracks)
-                if len(tracks) < limit:
-                    break
-                offset += limit
-            except Exception as e:
-                logging.error(f"Error fetching tracks: {e}")
-                break
+                headers = {"Authorization": f"Bearer {token}"}
+                params = {"offset": offset}
+                playlist_id = match.group(1)
+                playlist_url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
 
-        track_urls = []
+                async with session.get(playlist_url, headers=headers, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
 
-        for item in all_tracks:
-            track = item.get("track")
-            if track:
-                track_url = track.get("external_urls", {}).get("spotify")
-                if track_url:
-                    track_urls.append(track_url)
+                        for track in data["items"]:
+                            tracks.append(track["track"]["external_urls"]["spotify"])
 
-        return track_urls
+        except Exception as e:
+            logging.error(f"Error fetching playlist tracks: {e}")
+            print(f"Error fetching playlist tracks: {e}")
+        return tracks

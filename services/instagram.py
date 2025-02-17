@@ -5,7 +5,6 @@ import os
 
 import aiofiles
 import aiohttp
-import yarl
 from utils import login_user, truncate_string
 
 class InstagramService(BaseService):
@@ -48,7 +47,7 @@ class InstagramService(BaseService):
                 media_filename = os.path.join(self.output_path, f"{media_pk}_{i}{filename_ext}")
 
                 async with aiohttp.ClientSession() as session:
-                    async with session.request("GET", url=yarl.URL(str(media_url), encoded=True)) as response:
+                    async with session.request("GET", url=str(media_url)) as response:
                         if response.status == 200:
                             async with aiofiles.open(media_filename, "wb") as file:
                                 await file.write(await response.read())

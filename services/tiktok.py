@@ -1,8 +1,6 @@
-from spotipy.util import logging
 from .base_service import BaseService
 import re
-import aiohttp
-import os
+import logging
 from ttsave_api import TTSave, ContentType
 
 class TikTokService(BaseService):

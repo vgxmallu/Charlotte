@@ -100,7 +100,7 @@ async def handle_playlist_download(service, url: str, message: types.Message) ->
     assert message.bot, "Bot is not found"
 
     try:
-        tracks = service.get_playlist_tracks(url)
+        tracks = await service.get_playlist_tracks(url)
         for track in tracks:
             if message.from_user.id not in user_tasks:
                 break

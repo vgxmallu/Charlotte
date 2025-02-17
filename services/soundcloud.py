@@ -70,7 +70,7 @@ class SoundCloudService(BaseService):
             result.append({"type": "audio", "path": audio_filename, "cover": cover_filename})
         return result
 
-    def get_playlist_tracks(self, url: str) -> list[str]:
+    async def get_playlist_tracks(self, url: str) -> list[str]:
         """
         Extracts all track URLs from a SoundCloud playlist.
 

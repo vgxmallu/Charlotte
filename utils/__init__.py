@@ -8,6 +8,7 @@ from .music_search_engine import search_music
 from .get_applemusic_author import get_applemusic_author
 from .get_spotify_author import get_spotify_author
 from .instagram_login import login_user
+from .spotify_login import get_access_token
 
 #  Work with language
 from .google_translate import translate_text
@@ -25,5 +26,5 @@ from .error_handler import handle_download_error
 __all__ =[
     "delete_files", "get_applemusic_author", "get_spotify_author", "translate_text", "is_image_or_video", "search_music",
     "get_chat_language", "set_default_commands", "update_metadata", "random_emoji", "truncate_string",
-    "get_service_handler", "login_user", "handle_download_error"
+    "get_service_handler", "login_user", "handle_download_error", "get_access_token"
 ]

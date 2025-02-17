@@ -21,9 +21,6 @@ async def get_applemusic_author(url: str):
 
                 soup = BeautifulSoup(html_content, 'html.parser')
 
-                with open("temp.html", "w") as file:
-                    file.write(str(soup))
-
                 title = soup.find('title').text.strip()
                 track_title = title.split("–")[0].strip() if title else None
 

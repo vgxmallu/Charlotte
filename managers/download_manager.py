@@ -122,9 +122,10 @@ class MediaHandler:
                 thumbnail=types.FSInputFile(cover_path)
             )
 
-            await delete_files([absolute_cover_path])
+            await delete_files([audio["path"], absolute_cover_path])
         else:
             await message.answer_audio(
                 audio=types.FSInputFile(audio["path"]),
                 disable_notification=True
             )
+            await delete_files([audio["path"]])
