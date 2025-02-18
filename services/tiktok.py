@@ -24,16 +24,22 @@ class TikTokService(BaseService):
                 downloads_dir=self.output_path
             )
 
+
+
             if saved_files is None:
                 raise ValueError("Failed to download TikTok content")
 
-            for file in saved_files:
+            for file in saved_files["files"]:
                 if file.endswith(".mp4"):
                     result.append({"type": "video", "path": file})
                 elif file.endswith(".jpg") or file.endswith(".png"):
                     result.append({"type": "image", "path": file})
                 elif file.endswith(".mp3"):
                     result.append({"type": "audio", "path": file, "cover":  None})
+
+            title = saved_files["meta"]["desc"] if saved_files["meta"]["desc"] else ""
+
+            result.append({"type": "title", "title": title})
 
             return result
 
