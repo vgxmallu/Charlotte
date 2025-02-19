@@ -1,6 +1,7 @@
 import aiohttp
 import logging
 from bs4 import BeautifulSoup
+import re
 
 
 async def get_applemusic_author(url: str):
@@ -17,14 +18,16 @@ async def get_applemusic_author(url: str):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
-                html_content = await response.text()
+                html_content = await response.text(encoding="utf-8")
 
                 soup = BeautifulSoup(html_content, 'html.parser')
 
-                title = soup.find('title').text.strip()
-                track_title = title.split("–")[0].strip() if title else None
+                title = soup.find('title').text.strip() if soup.find('title') else ""
+                parts = re.split(r" - | – ", title, maxsplit=2)
 
-                artist_name = title.split("–")[1].replace("Song by ", "").strip() if title else None
+                track_title = parts[0].strip() if len(parts) > 0 else None
+
+                artist_name = parts[1].replace("Song by ", "").strip() if len(parts) > 1 else None
 
                 picture_tag = soup.find('picture', class_='svelte-3e3mdo')
 
