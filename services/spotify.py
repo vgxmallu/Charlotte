@@ -9,7 +9,7 @@ from yt_dlp.utils import sanitize_filename
 
 import aiohttp
 
-from utils import get_spotify_author, search_music, update_metadata, get_access_token
+from utils import get_spotify_author, search_music, update_metadata, get_access_token, random_cookie_file
 
 from .base_service import BaseService
 
@@ -22,6 +22,7 @@ class SpotifyService(BaseService):
         self.yt_dlp_options = {
             "format": "bestaudio",
             "outtmpl": f"{output_path}/{sanitize_filename('%(title)s')}",
+            "cookiefile": random_cookie_file(),
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",

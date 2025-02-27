@@ -3,7 +3,7 @@ import re
 import os
 import logging
 import urllib.request
-from utils import update_metadata
+from utils import update_metadata, random_cookie_file
 import asyncio
 
 import yt_dlp
@@ -19,6 +19,7 @@ class SoundCloudService(BaseService):
             "format": "bestaudio",
             "writethumbnail": True,
             "outtmpl": f"{output_path}/{sanitize_filename('%(title)s')}",
+            "cookiefile": random_cookie_file(),
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",

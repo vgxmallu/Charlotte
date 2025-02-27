@@ -7,7 +7,7 @@ import urllib.request
 import yt_dlp
 from yt_dlp.utils import sanitize_filename
 
-from utils import get_applemusic_author, update_metadata, search_music
+from utils import get_applemusic_author, update_metadata, search_music, random_cookie_file
 
 from .base_service import BaseService
 
@@ -21,6 +21,7 @@ class AppleMusicService(BaseService):
         self.yt_dlp_options = {
             "format": "bestaudio",
             "outtmpl": f"{output_path}/{sanitize_filename('%(title)s')}",
+            "cookiefile": random_cookie_file(),
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
