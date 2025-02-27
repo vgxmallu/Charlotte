@@ -8,7 +8,7 @@ from typing import Optional
 import yt_dlp
 from yt_dlp.utils import sanitize_filename
 
-from utils import update_metadata, truncate_string
+from utils import update_metadata, random_cookie_file
 
 
 class YouTubeService(BaseService):
@@ -21,11 +21,13 @@ class YouTubeService(BaseService):
                 "format": "bv*[filesize < 50M][ext=mp4][vcodec^=avc1] + ba[ext=m4a]",
                 "outtmpl": f"{self.output_path}/%(title)s.%(ext)s",
                 'noplaylist': True,
+                "cookiefile": random_cookie_file()
             }
         self.yt_dlp_audio_options = {
                 "format": "m4a/bestaudio/best",
                 "writethumbnail": True,
                 "outtmpl": f"{self.output_path}/{sanitize_filename('%(title)s')}",
+                "cookiefile": random_cookie_file(),
                 "postprocessors": [
                     {
                         "key": "FFmpegExtractAudio",

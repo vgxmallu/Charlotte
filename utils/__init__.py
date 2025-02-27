@@ -19,6 +19,7 @@ from .set_bot_commands import set_default_commands
 
 #  Utils
 from .random_emoji import random_emoji
+from .random_emoji import random_cookie_file
 from .truncate_string import truncate_string
 from .register_services import get_service_handler
 from .error_handler import handle_download_error
@@ -26,5 +27,5 @@ from .error_handler import handle_download_error
 __all__ =[
     "delete_files", "get_applemusic_author", "get_spotify_author", "translate_text", "is_image_or_video", "search_music",
     "get_chat_language", "set_default_commands", "update_metadata", "random_emoji", "truncate_string",
-    "get_service_handler", "login_user", "handle_download_error", "get_access_token"
+    "get_service_handler", "login_user", "handle_download_error", "get_access_token", "random_cookie_file"
 ]
