@@ -166,3 +166,4 @@ database/database.sql
 config/.env
 test
 session.json
+cookies/*
