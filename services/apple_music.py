@@ -54,6 +54,9 @@ class AppleMusicService(BaseService):
             audio_filename = os.path.join(self.output_path, f"{sanitize_filename(ydl_title)}.mp3")
             cover_filename = os.path.join(self.output_path, f"{sanitize_filename(ydl_title)}.jpg")
 
+            if cover_url is None:
+                cover_url = info_dict.get("thumbnail", None)
+
             urllib.request.urlretrieve(cover_url, cover_filename)
 
             update_metadata(audio_filename, artist=artist, title=title, cover_file=cover_filename)
