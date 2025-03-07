@@ -6,9 +6,11 @@ from typing import Dict, Any
 import aiofiles
 import aiohttp
 from ffmpeg.asyncio import FFmpeg
+from fake_useragent import UserAgent
 
 from .base_service import BaseService
 
+ua = UserAgent()
 
 class PinterestService(BaseService):
     name = "Pinterest"
@@ -82,11 +84,18 @@ class PinterestService(BaseService):
 
     async def _get_pin_info(self, pin_id: int) -> Dict[str, Any]:
         url = 'https://www.pinterest.com/resource/PinResource/get/'
-        options = {'field_set_key': 'unauth_react_main_pin', 'id': f'{pin_id}'}
-        query = {'data': json.dumps({'options': options})}
+        headers = {
+            'accept': 'application/json, text/javascript, */*, q=0.01',
+            'user-agent': ua.random,
+            'x-pinterest-pws-handler': 'www/pin/[id]/feedback.js'
+        }
+        params = {
+            'source_url': f'/pin/{pin_id}',
+            "data": f'{{"options":{{"id":"{pin_id}","field_set_key":"auth_web_main_pin","noCache":true,"fetch_visual_search_objects":true}},"context":{{}}}}'
+        }
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=query) as response:
+            async with session.get(url, params=params, headers=headers) as response:
                 if response.status == 200:
                     response_json = await response.json()
                 else:

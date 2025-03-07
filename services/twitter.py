@@ -4,7 +4,6 @@ import re
 from typing import Any, Dict
 
 import aiofiles
-from aiogram.types import file
 import aiohttp
 from fake_useragent import UserAgent
 
