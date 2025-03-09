@@ -32,7 +32,8 @@ async def help_command(message: types.Message, state: FSMContext) -> None:
             "<b>Pinterest</b> - I can download videos and photos for you.\n"
             "<b>BiliBili</b> - It's a bit of a hassle, but I can send you videos.\n"
             "<b>Twitter</b> - I'll download videos and photos for you.\n"
-            "<b>Instagram</b> - I'll download photos or Reels for you."
+            "<b>Instagram</b> - I'll download photos or Reels for you.\n"
+            "<b>Pixiv</b> - I'll download artworks  for you.\n"
         ).format(name=user.first_name or user.username),
         parse_mode=ParseMode.HTML,
     )

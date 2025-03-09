@@ -7,9 +7,11 @@ from .tiktok import TikTokService
 from .youtube import YouTubeService
 from .instagram import InstagramService
 from .twitter import TwitterService
+from .pixiv import PixivService
 
 __all__ = [
     "AppleMusicService", "BiliBiliService", "PinterestService",
     "SoundCloudService", "SpotifyService", "TikTokService",
     "YouTubeService", "InstagramService", "TwitterService",
+    "PixivService"
 ]

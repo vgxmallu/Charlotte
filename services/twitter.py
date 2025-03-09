@@ -19,9 +19,6 @@ class TwitterService(BaseService):
         os.makedirs(self.output_path, exist_ok=True)
         self.auth = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
         self.user_agent = ua.random
-        self.yt_dlp_video_options = {
-            "outtmpl": f"{output_path}/%(title)s.%(ext)s",
-        }
 
     def is_supported(self, url: str) -> bool:
         return bool(re.match(r'https://(?:twitter|x)\.com/\w+/status/\d+', url))

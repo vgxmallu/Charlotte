@@ -1,16 +1,16 @@
-# Russian translations for PROJECT.
-# Copyright (C) 2024 ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+# Russian translations for Charlotte.
+# Copyright (C) 2024 JellyTyan
+# This file is distributed under the same license as the Charlotte project.
+# JellyTyan lycomilopster@gmail.com, 2024.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PROJECT VERSION\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-01-18 15:29+0100\n"
-"PO-Revision-Date: 2025-03-07 21:47+0100\n"
+"Project-Id-Version: Version\n"
+"Report-Msgid-Bugs-To: lycomilopster@gmail.com\n"
+"POT-Creation-Date: 2025-03-09 15:43+0100\n"
+"PO-Revision-Date: 2025-03-09 15:44+0100\n"
 "Last-Translator: JellyTyan\n"
-"Language-Team: ru <LL@li.org>\n"
+"Language-Team: ru lycomilopster@gmail.com\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -20,15 +20,15 @@ msgstr ""
 "Generated-By: Babel 2.13.1\n"
 "X-Generator: Poedit 3.5\n"
 
-#: handlers/admin/news.py:32
+#: handlers/admin/news.py:36
 msgid "Send a message with the news"
 msgstr "Отправьте сообщение с новостями"
 
-#: handlers/admin/news.py:64
+#: handlers/admin/news.py:68
 msgid "Mailing list started"
 msgstr "Запущена рассылка"
 
-#: handlers/admin/news.py:91
+#: handlers/admin/news.py:110
 msgid ""
 "The mailing has been completed\n"
 "Beginning at {start_time}\n"
@@ -44,7 +44,7 @@ msgstr ""
 "Успешно отправлено: {sucсess_send}\n"
 "Ошибки: {error_send}"
 
-#: handlers/user/help.py:17
+#: handlers/user/help.py:18
 msgid ""
 "<b>Hey, {name}! You've reached out for help!</b>\n"
 "To get started, here are the commands available <i>to you</i>:\n"
@@ -68,7 +68,8 @@ msgid ""
 "<b>Pinterest</b> - I can download videos and photos for you.\n"
 "<b>BiliBili</b> - It's a bit of a hassle, but I can send you videos.\n"
 "<b>Twitter</b> - I'll download videos and photos for you.\n"
-"<b>Instagram</b> - I'll download photos or Reels for you."
+"<b>Instagram</b> - I'll download photos or Reels for you.\n"
+"<b>Pixiv</b> - I'll download artworks  for you.\n"
 msgstr ""
 "Привет, {name}! Ты обратился за помощью — и вот я здесь! ✨\n"
 "\n"
@@ -83,14 +84,14 @@ msgstr ""
 "\n"
 "🎵 Музыка – Я беру треки с YouTube Music, SoundCloud, Spotify и Apple Music, "
 "добавляю обложки и детали!\n"
-"📺 Видео и фото – С YouTube, TikTok, Twitter, Instagram, Pinterest и даже "
-"BiliBili! (Лимит на YouTube: 50MB)"
+"📺 Видео и фото – С YouTube, TikTok, Twitter, Instagram, Pinterest, Pixiv и "
+"даже BiliBili! (Лимит на YouTube: 50MB)\n"
 
-#: handlers/user/help.py:45
+#: handlers/user/help.py:50
 msgid "Your download has been cancelled."
 msgstr "🚫 Пшик! Твоя загрузка испарилась в воздухе!"
 
-#: handlers/user/help.py:47
+#: handlers/user/help.py:52
 msgid "No active download task found to cancel."
 msgstr ""
 "🌸 Активных загрузок для отмены не найдено. Но не переживай, я всегда тут, "
@@ -136,7 +137,7 @@ msgstr ""
 "Если что-то не работает, смело пиши в телеграмм @jellytyan, или лучше, "
 "отправь мне ссылку на то, что не удалось скачать 🧡"
 
-#: handlers/user/support.py:11
+#: handlers/user/support.py:12
 msgid ""
 "After some thought, I dare to leave a link to support the project. If you "
 "have a desire to improve the work of Charlotte, please follow this link. For "
@@ -155,52 +156,56 @@ msgstr ""
 "\n"
 "👉 Support Charlotte: https://buymeacoffee\\.com/jellytyan"
 
-#: handlers/user/url.py:26
+#: handlers/user/url.py:29
+msgid "Video"
+msgstr "🎥 Видео"
+
+#: handlers/user/url.py:30
+msgid "Audio"
+msgstr "🎶Аудио"
+
+#: handlers/user/url.py:32
+msgid "Choose a format to download:"
+msgstr "✨ Выбери формат для скачивания:"
+
+#: handlers/user/url.py:57
+msgid "The selection format is only available for YouTube."
+msgstr "🌸 Выбор формата доступен только для YouTube. 😊"
+
+#: handlers/user/url.py:65
+msgid "Invalid choice."
+msgstr ""
+
+#: handlers/user/url.py:115
+msgid "Download completed."
+msgstr ""
+"🎉 Загрузка завершена! Если нужно что-то еще, не стесняйся, спрашивай! 💖"
+
+#: managers/download_manager.py:19
 msgid "You already have an active download. Cancel it with /cancel."
 msgstr ""
 "❌ У вас уже есть активная загрузка. Отмените её с помощью команды /cancel, "
 "если хотите начать заново! 💖"
 
-#: handlers/user/url.py:114
+#: utils/error_handler.py:11
 msgid "Download canceled."
 msgstr ""
 "💔 Ой, я отменила загрузку! Если это ошибка, просто скажи, и я всё поправлю!"
 
-#: handlers/user/url.py:116
+#: utils/error_handler.py:13
 msgid "Critical error #022 - media file is too large"
 msgstr "⚠️ Критическая ошибка #022 – Медиафайл слишком большой."
 
-#: handlers/user/url.py:118
+#: utils/error_handler.py:15
 msgid ""
 "Sorry, the download returned empty content. Please check the link and try "
 "again."
 msgstr ""
 "😔 Извини, загрузка вернула пустой контент. Проверь ссылку и попробуй снова."
 
-#: handlers/user/url.py:121
+#: utils/error_handler.py:18
 msgid "Sorry, there was an error. Try again later 🧡"
 msgstr "😔 Извини, произошла ошибка. Попробуй снова позже 🧡"
-
-#: handlers/user/url.py:139
-msgid "Video"
-msgstr "🎥 Видео"
-
-#: handlers/user/url.py:140
-msgid "Audio"
-msgstr "🎶Аудио"
-
-#: handlers/user/url.py:142
-msgid "Choose a format to download:"
-msgstr "✨ Выбери формат для скачивания:"
-
-#: handlers/user/url.py:160
-msgid "The selection format is only available for YouTube."
-msgstr "🌸 Выбор формата доступен только для YouTube. 😊"
-
-#: handlers/user/url.py:212
-msgid "Download completed."
-msgstr ""
-"🎉 Загрузка завершена! Если нужно что-то еще, не стесняйся, спрашивай! 💖"
 
 #~ msgid "Download task was successfully cancelled."
 #~ msgstr "Задача загрузки была успешно отменена."

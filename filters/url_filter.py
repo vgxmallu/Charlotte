@@ -16,6 +16,7 @@ class UrlFilter(BaseFilter):
         - Bilibili (video URLs)
         - Twitter/X (status URLs)
         - Instagram (posts, reels, and stories)
+        - Pixiv (artworks)
 
     Methods:
         __call__(message: types.Message) -> bool:
@@ -36,6 +37,7 @@ class UrlFilter(BaseFilter):
                 re.match(r'https?://(?:www\.)?bilibili\.(?:com|tv)/[\w/?=&]+', message.text),
                 re.match(r'https://(?:twitter|x)\.com/\w+/status/\d+', message.text),
                 re.match(r'https://www\.instagram\.com/(?:p|reel|tv|stories)/([A-Za-z0-9_-]+)/', message.text),
+                re.match(r'https:\/\/www\.pixiv\.net\/(?:[a-z]{2}\/)?artworks\/\d+', message.text),
             ])
         else:
             return False

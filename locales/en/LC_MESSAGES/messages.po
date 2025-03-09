@@ -1,33 +1,33 @@
-# English translations for PROJECT.
-# Copyright (C) 2024 ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+# English translations for Charlotte.
+# Copyright (C) 2024 JellyTyan
+# This file is distributed under the same license as the Charlotte project.
+# JellyTyan lycomilopster@gmail.com, 2024.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Charlotte\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-01-18 15:29+0100\n"
-"PO-Revision-Date: 2025-03-07 21:45+0100\n"
+"Project-Id-Version: Version\n"
+"Report-Msgid-Bugs-To: lycomilopster@gmail.com\n"
+"POT-Creation-Date: 2025-03-09 15:43+0100\n"
+"PO-Revision-Date: 2025-03-09 15:44+0100\n"
 "Last-Translator: JellyTyan\n"
-"Language-Team: en <LL@li.org>\n"
+"Language-Team: en lycomilopster@gmail.com\n"
 "Language: en\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.13.1\n"
 "X-Generator: Poedit 3.5\n"
 
-#: handlers/admin/news.py:32
+#: handlers/admin/news.py:36
 msgid "Send a message with the news"
 msgstr ""
 
-#: handlers/admin/news.py:64
+#: handlers/admin/news.py:68
 msgid "Mailing list started"
 msgstr ""
 
-#: handlers/admin/news.py:91
+#: handlers/admin/news.py:110
 msgid ""
 "The mailing has been completed\n"
 "Beginning at {start_time}\n"
@@ -37,7 +37,7 @@ msgid ""
 "erros: {error_send}"
 msgstr ""
 
-#: handlers/user/help.py:17
+#: handlers/user/help.py:18
 msgid ""
 "<b>Hey, {name}! You've reached out for help!</b>\n"
 "To get started, here are the commands available <i>to you</i>:\n"
@@ -53,15 +53,16 @@ msgid ""
 "Let me list all the available sources for you:\n"
 "<b>Youtube</b> - I'll download videos, shorts, or music from videos for you! "
 "There's a 50 MB limit per video.\n"
-"<b>Soundcloud</b> - I'll download music, add the cover, title, and artist to make "
-"it all look perfect!\n"
+"<b>Soundcloud</b> - I'll download music, add the cover, title, and artist to "
+"make it all look perfect!\n"
 "<b>Spotify</b> - Similar functionality to Soundcloud, but for Spotify!\n"
 "<b>Apple Music</b> - Same here! Only beauty!\n"
 "<b>TikTok</b> - I'll download videos and images for you!\n"
 "<b>Pinterest</b> - I can download videos and photos for you.\n"
 "<b>BiliBili</b> - It's a bit of a hassle, but I can send you videos.\n"
 "<b>Twitter</b> - I'll download videos and photos for you.\n"
-"<b>Instagram</b> - I'll download photos or Reels for you."
+"<b>Instagram</b> - I'll download photos or Reels for you.\n"
+"<b>Pixiv</b> - I'll download artworks  for you.\n"
 msgstr ""
 "Hey, {name}! You’ve reached out for help—so here I am! ✨\n"
 "\n"
@@ -77,14 +78,14 @@ msgstr ""
 "🎵 Music – I grab tracks from <b>Youtube Music</b>, <b>SoundCloud</b>, "
 "<b>Spotify</b>, and <b>Apple Music</b>, adding covers & details!\n"
 "📺 Videos & Photos – From <b>YouTube</b>, <b>TikTok</b>, <b>Twitter</b>, "
-"<b>Instagram</b>, <b>Pinterest</b>, and even <b>BiliBili</b>! (YouTube limit: "
-"50MB)"
+"<b>Instagram</b>, <b>Pinterest</b>, <b>Pixiv</b> and even <b>BiliBili</b>! "
+"(YouTube limit: 50MB)\n"
 
-#: handlers/user/help.py:45
+#: handlers/user/help.py:50
 msgid "Your download has been cancelled."
 msgstr "🚫 Poof! Your download just vanished into thin air! "
 
-#: handlers/user/help.py:47
+#: handlers/user/help.py:52
 msgid "No active download task found to cancel."
 msgstr ""
 "🌸 No active download found to cancel. But don’t worry, I’m here if you need "
@@ -119,8 +120,8 @@ msgstr ""
 "\n"
 "Nice to meet you, {name}! 😊\n"
 "\n"
-"I’m Charlotte, and my hobby? Well, I’m a content pirate—I grab all the cool stuff "
-"from the internet! 🎉\n"
+"I’m Charlotte, and my hobby? Well, I’m a content pirate—I grab all the cool "
+"stuff from the internet! 🎉\n"
 "\n"
 "Use /help to discover everything about me, commands, and all the magic I can do! "
 "✨\n"
@@ -128,68 +129,75 @@ msgstr ""
 "If something doesn’t work, feel free to email @jellytyan, or better yet, send me "
 "the link to what didn’t download 🧡"
 
-#: handlers/user/support.py:11
+#: handlers/user/support.py:12
 msgid ""
 "After some thought, I dare to leave a link to support the project. If you have a "
 "desire to improve the work of Charlotte, please follow this link. For every 3 "
-"dollars I can buy a month of hosting that is 2 times better than the current one, "
-"which means Charlotte will respond faster even when busy. You are not obligated "
-"to pay. Only if you have the desire!!!!\n"
+"dollars I can buy a month of hosting that is 2 times better than the current "
+"one, which means Charlotte will respond faster even when busy. You are not "
+"obligated to pay. Only if you have the desire!!!!\n"
 " https://buymeacoffee.com/jellytyan"
 msgstr ""
-"After some thought, I’m brave enough to leave a link to support my project\\! 🧡\n"
+"After some thought, I’m brave enough to leave a link to support my project\\! "
+"🧡\n"
 "\n"
 "For every $3, I can upgrade to a hosting plan that’s twice as fast—which means "
 "Charlotte will respond even quicker, even when she’s busy\\! 🚀\n"
 "\n"
-"But remember, there’s absolutely no obligation\\! Only if you feel like it\\! 😊\n"
+"But remember, there’s absolutely no obligation\\! Only if you feel like it\\! "
+"😊\n"
 "\n"
 "👉 Support Charlotte: https://buymeacoffee\\.com/jellytyan"
 
-#: handlers/user/url.py:26
+#: handlers/user/url.py:29
+msgid "Video"
+msgstr "🎥Video"
+
+#: handlers/user/url.py:30
+msgid "Audio"
+msgstr "🎶Audio"
+
+#: handlers/user/url.py:32
+msgid "Choose a format to download:"
+msgstr "✨ Choose a format to download:"
+
+#: handlers/user/url.py:57
+msgid "The selection format is only available for YouTube."
+msgstr "🌸 The selection format is only available for YouTube. 😊"
+
+#: handlers/user/url.py:65
+msgid "Invalid choice."
+msgstr ""
+
+#: handlers/user/url.py:115
+msgid "Download completed."
+msgstr "🎉 Download completed! If you need anything else, feel free to ask! 💖"
+
+#: managers/download_manager.py:19
 msgid "You already have an active download. Cancel it with /cancel."
 msgstr ""
 "🙅‍♀️ It looks like you have an active download already! If you want to cancel it, "
 "use /cancel."
 
-#: handlers/user/url.py:114
+#: utils/error_handler.py:11
 msgid "Download canceled."
-msgstr "💔 The download has been canceled. If that was a mistake, I’m here to help!"
+msgstr ""
+"💔 The download has been canceled. If that was a mistake, I’m here to help!"
 
-#: handlers/user/url.py:116
+#: utils/error_handler.py:13
 msgid "Critical error #022 - media file is too large"
 msgstr "⚠️ Critical error #022 – The media file is too large. "
 
-#: handlers/user/url.py:118
+#: utils/error_handler.py:15
 msgid ""
 "Sorry, the download returned empty content. Please check the link and try again."
 msgstr ""
 "😔 Sorry, the download returned empty content. Please check the link and try "
 "again."
 
-#: handlers/user/url.py:121
+#: utils/error_handler.py:18
 msgid "Sorry, there was an error. Try again later 🧡"
 msgstr "😔 Sorry, there was an error. Please try again later 🧡"
-
-#: handlers/user/url.py:139
-msgid "Video"
-msgstr "🎥Video"
-
-#: handlers/user/url.py:140
-msgid "Audio"
-msgstr "🎶Audio"
-
-#: handlers/user/url.py:142
-msgid "Choose a format to download:"
-msgstr "✨ Choose a format to download:"
-
-#: handlers/user/url.py:160
-msgid "The selection format is only available for YouTube."
-msgstr "🌸 The selection format is only available for YouTube. 😊"
-
-#: handlers/user/url.py:212
-msgid "Download completed."
-msgstr "🎉 Download completed! If you need anything else, feel free to ask! 💖"
 
 #~ msgid "*Хэй, {name}! Ты обратился за помощью!*\n"
 #~ msgstr "*Hey, {name}! You asked for help!\n"
@@ -351,17 +359,17 @@ msgstr "🎉 Download completed! If you need anything else, feel free to ask! �
 
 #~ msgid ""
 #~ "После некоторых обдумий, я решаюсь оставить ссылку на поддержку проекта. Если "
-#~ "у вас будет желание улучшить работу Шарлотки, то прошу перейти по этой ссылке. "
-#~ "За каждые 3 доллара я могу покупать месяц хостинга, который в 2 раза лучше "
-#~ "текущего, что означает Шарлотка будет отвечать быстрее даже при загруженности. "
-#~ "Вы не обязаны платить. Только если у вас есть желание!!!!\n"
+#~ "у вас будет желание улучшить работу Шарлотки, то прошу перейти по этой "
+#~ "ссылке. За каждые 3 доллара я могу покупать месяц хостинга, который в 2 раза "
+#~ "лучше текущего, что означает Шарлотка будет отвечать быстрее даже при "
+#~ "загруженности. Вы не обязаны платить. Только если у вас есть желание!!!!\n"
 #~ " https://buymeacoffee.com/jellytyan"
 #~ msgstr ""
-#~ "After some thought, I dare to leave a link to support the project. If you have "
-#~ "a desire to improve the work of Charlotte, please follow this link. For every "
-#~ "3 dollars I can buy a month of hosting that is 2 times better than the current "
-#~ "one, which means Charlotte will respond faster even when busy. You are not "
-#~ "obligated to pay. Only if you have the desire!!!!\n"
+#~ "After some thought, I dare to leave a link to support the project. If you "
+#~ "have a desire to improve the work of Charlotte, please follow this link. For "
+#~ "every 3 dollars I can buy a month of hosting that is 2 times better than the "
+#~ "current one, which means Charlotte will respond faster even when busy. You "
+#~ "are not obligated to pay. Only if you have the desire!!!!\n"
 #~ " https://buymeacoffee.com/jellytyan"
 
 #~ msgid "Видео"

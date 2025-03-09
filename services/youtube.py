@@ -77,6 +77,8 @@ class YouTubeService(BaseService):
         try:
             with yt_dlp.YoutubeDL(self.yt_dlp_audio_options) as ydl:
                 info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
+                if info_dict is None:
+                    raise ValueError(f"Failed to extract info from the provided URL. {url}")
                 title = info_dict.get("title", "audio")
                 author = info_dict.get("uploader", "unknown")
 

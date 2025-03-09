@@ -7,7 +7,8 @@ from services import (
     AppleMusicService,
     BiliBiliService,
     TwitterService,
-    InstagramService
+    InstagramService,
+    PixivService
 )
 
 SERVICES = {}
@@ -30,3 +31,4 @@ register_service("apple_music", AppleMusicService())
 register_service("bilibili", BiliBiliService())
 register_service("twitter", TwitterService())
 register_service("instagram", InstagramService())
+register_service("pixiv", PixivService())
