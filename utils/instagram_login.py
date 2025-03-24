@@ -7,6 +7,7 @@ from config.secrets import INSTA_PASSWORD, INSTA_USERNAME
 
 logger = logging.getLogger()
 
+
 def login_user():
     """
     Attempts to log in to Instagram using either session data or username/password.
@@ -29,7 +30,9 @@ def login_user():
                 login_via_session = True
                 logger.info("Logged in via session successfully.")
             except LoginRequired:
-                logger.info("Session expired. Re-logging in with username and password.")
+                logger.info(
+                    "Session expired. Re-logging in with username and password."
+                )
         except Exception as e:
             logger.warning("Failed to load session: %s", e)
 

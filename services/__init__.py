@@ -10,8 +10,14 @@ from .twitter import TwitterService
 from .pixiv import PixivService
 
 __all__ = [
-    "AppleMusicService", "BiliBiliService", "PinterestService",
-    "SoundCloudService", "SpotifyService", "TikTokService",
-    "YouTubeService", "InstagramService", "TwitterService",
-    "PixivService"
+    "AppleMusicService",
+    "BiliBiliService",
+    "PinterestService",
+    "SoundCloudService",
+    "SpotifyService",
+    "TikTokService",
+    "YouTubeService",
+    "InstagramService",
+    "TwitterService",
+    "PixivService",
 ]

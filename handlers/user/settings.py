@@ -16,15 +16,19 @@ from functions.db import db_change_lang
 from utils.language_middleware import CustomMiddleware, i18n
 from loader import dp
 
+
 class Settings(StatesGroup):
     language = State()
+
 
 @dp.message(Command("settings"))
 async def settings_command(message: Message, state: FSMContext) -> None:
     chat = message.chat
 
     if chat.type == "group" or chat.type == "supergroup":
-        is_admin_or_owner = await check_if_admin_or_owner(message.bot, chat.id, message.from_user.id)
+        is_admin_or_owner = await check_if_admin_or_owner(
+            message.bot, chat.id, message.from_user.id
+        )
         if not is_admin_or_owner:
             await message.answer(_("You have no rights to edit these settings!"))
             return
@@ -53,7 +57,9 @@ async def process_settings_english(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "en")
     await CustomMiddleware(i18n=i18n).set_local(state=state, locale="en")
-    await message.answer("Your language has been changed to English", reply_markup=ReplyKeyboardRemove())
+    await message.answer(
+        "Your language has been changed to English", reply_markup=ReplyKeyboardRemove()
+    )
 
 
 @dp.message(Settings.language, EmojiTextFilter("Russian 🇷🇺"))
@@ -61,7 +67,9 @@ async def process_settings_russian(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "ru")
     await CustomMiddleware(i18n=i18n).set_local(state=state, locale="ru")
-    await message.answer("Ваш язык сменён на русский", reply_markup=ReplyKeyboardRemove())
+    await message.answer(
+        "Ваш язык сменён на русский", reply_markup=ReplyKeyboardRemove()
+    )
 
 
 @dp.message(Settings.language, EmojiTextFilter("Ukrainian 🇺🇦"))
@@ -69,7 +77,9 @@ async def process_settings_ukrainian(message: Message, state: FSMContext) -> Non
     await state.clear()
     await db_change_lang(message.chat.id, "uk")
     await CustomMiddleware(i18n=i18n).set_local(state=state, locale="uk")
-    await message.answer("Ваша мова зміннена на українську", reply_markup=ReplyKeyboardRemove())
+    await message.answer(
+        "Ваша мова зміннена на українську", reply_markup=ReplyKeyboardRemove()
+    )
 
 
 @dp.message(Settings.language, EmojiTextFilter("Polish 🇵🇱"))
@@ -77,7 +87,9 @@ async def process_settings_polish(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "pl")
     await CustomMiddleware(i18n=i18n).set_local(state=state, locale="pl")
-    await message.answer("Twój język został zmieniony na Polski", reply_markup=ReplyKeyboardRemove())
+    await message.answer(
+        "Twój język został zmieniony na Polski", reply_markup=ReplyKeyboardRemove()
+    )
 
 
 @dp.message(Settings.language, EmojiTextFilter("Cancel ❌"))

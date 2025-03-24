@@ -1,5 +1,6 @@
 from database.database_manager import SQLiteDatabaseManager
 
+
 async def db_add_chat(chat_id: int, locale: str, anonime_statistic: int) -> None:
     """Add chat info into database
 
@@ -20,6 +21,7 @@ async def db_add_chat(chat_id: int, locale: str, anonime_statistic: int) -> None
             (chat_id, locale, anonime_statistic, chat_id),
         )
 
+
 async def db_change_lang(chat_id: int, lang: str) -> None:
     """Change localisation in database
 
@@ -29,11 +31,15 @@ async def db_change_lang(chat_id: int, lang: str) -> None:
     """
 
     async with SQLiteDatabaseManager() as cursor:
-        await cursor.execute("SELECT lang FROM chat_settings WHERE chat_id = ?", [chat_id])
+        await cursor.execute(
+            "SELECT lang FROM chat_settings WHERE chat_id = ?", [chat_id]
+        )
         row = await cursor.fetchone()
 
         if row:
-            await cursor.execute("UPDATE chat_settings SET lang = ? WHERE chat_id = ?", (lang, chat_id))
+            await cursor.execute(
+                "UPDATE chat_settings SET lang = ? WHERE chat_id = ?", (lang, chat_id)
+            )
         else:
             await cursor.execute(
                 """
@@ -42,6 +48,7 @@ async def db_change_lang(chat_id: int, lang: str) -> None:
                 """,
                 (chat_id, lang, 0),
             )
+
 
 async def db_get_lang(chat_id: int) -> str:
     """Get localisation from database
@@ -53,7 +60,9 @@ async def db_get_lang(chat_id: int) -> str:
         str: Localisation
     """
     async with SQLiteDatabaseManager() as cursor:
-        await cursor.execute("SELECT lang FROM chat_settings WHERE chat_id = ?", [chat_id])
+        await cursor.execute(
+            "SELECT lang FROM chat_settings WHERE chat_id = ?", [chat_id]
+        )
         row = await cursor.fetchone()
 
         if row:

@@ -2,32 +2,44 @@ import asyncio
 import logging
 import os
 import re
-import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
+import aiofiles
+import aiohttp
 import yt_dlp
+from aiofiles import os as aios
 from yt_dlp.utils import sanitize_filename
 
-import aiohttp
-
-from utils import get_spotify_author, search_music, update_metadata, get_access_token, random_cookie_file
+from utils import (
+    get_access_token,
+    get_spotify_author,
+    random_cookie_file,
+    search_music,
+    update_metadata,
+)
 
 from .base_service import BaseService
 
+
 class SpotifyService(BaseService):
     name = "Spotify"
+    _download_executor = ThreadPoolExecutor(max_workers=10)
+
     def __init__(self, output_path: str = "other/downloadsTemp") -> None:
         super().__init__()
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
-        self.yt_dlp_options = {
+
+    def _get_audio_options(self):
+        return {
             "format": "bestaudio",
-            "outtmpl": f"{output_path}/{sanitize_filename('%(title)s')}",
+            "outtmpl": f"{self.output_path}/{sanitize_filename('%(title)s')}",
             "cookiefile": random_cookie_file(),
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "mp3",
-                },
+                }
             ],
         }
 
@@ -46,28 +58,56 @@ class SpotifyService(BaseService):
             return result
 
         video_link = await search_music(artist, title)
-
+        options = self._get_audio_options()
         try:
-            ydl = yt_dlp.YoutubeDL(self.yt_dlp_options)
+            with yt_dlp.YoutubeDL(options) as ydl:
+                loop = asyncio.get_event_loop()
 
-            info_dict = await asyncio.to_thread(ydl.extract_info, video_link, download=False)
-            ydl_title = info_dict.get("title")
+                info_dict = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: ydl.extract_info(video_link, download=False)
+                )
+                if not info_dict:
+                    raise ValueError("Failed to get audio info")
 
-            await asyncio.to_thread(ydl.download, [video_link])
+                await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: ydl.download([video_link])
+                )
 
-            audio_filename = os.path.join(self.output_path, f"{sanitize_filename(ydl_title)}.mp3")
-            cover_filename  = os.path.join(self.output_path, f"{sanitize_filename(ydl_title)}.jpg")
+                base_path = os.path.join(
+                    self.output_path,
+                    f"{sanitize_filename(info_dict['title'])}"
+                )
+                audio_path = f"{base_path}.mp3"
+                cover_path = f"{base_path}.jpg"
 
-            if cover_url is None:
-                cover_url = info_dict.get("thumbnail", None)
-            urllib.request.urlretrieve(cover_url, cover_filename)
+                if cover_url is None:
+                    cover_url = info_dict.get("thumbnail", None)
 
-            assert cover_filename, "Cover URL is not available"
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(cover_url) as response:
+                        response.raise_for_status()
+                        async with aiofiles.open(cover_path, 'wb') as f:
+                            async for chunk in response.content.iter_chunked(1024):
+                                await f.write(chunk)
 
-            update_metadata(audio_filename, artist=artist, title=title, cover_file=cover_filename)
+                assert cover_path, "Cover URL is not available"
 
-            if os.path.exists(audio_filename) or os.path.exists(cover_filename):
-                result.append({"type": "audio", "path": audio_filename, "cover": cover_filename})
+                await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: update_metadata(
+                        audio_path,
+                        title=title,
+                        artist=artist,
+                        cover_file=cover_path
+                    )
+                )
+
+                if await aios.path.exists(audio_path) or await aios.path.exists(cover_path):
+                    result.append(
+                        {"type": "audio", "path": audio_path, "cover": cover_path}
+                    )
             return result
 
         except Exception as e:
@@ -92,9 +132,11 @@ class SpotifyService(BaseService):
                 headers = {"Authorization": f"Bearer {token}"}
                 params = {"offset": offset}
                 playlist_id = match.group(1)
-                playlist_url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+                playlist_url = (f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks")
 
-                async with session.get(playlist_url, headers=headers, params=params) as response:
+                async with session.get(
+                    playlist_url, headers=headers, params=params
+                ) as response:
                     if response.status == 200:
                         data = await response.json()
 
@@ -103,5 +145,4 @@ class SpotifyService(BaseService):
 
         except Exception as e:
             logging.error(f"Error fetching playlist tracks: {e}")
-            print(f"Error fetching playlist tracks: {e}")
         return tracks

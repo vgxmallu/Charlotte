@@ -3,14 +3,20 @@ import re
 import logging
 from ttsave_api import TTSave, ContentType
 
+
 class TikTokService(BaseService):
     name = "Tiktok"
+
     def __init__(self, output_path: str = "other/downloadsTemp") -> None:
         self.output_path = output_path
         self.ttsave_client = TTSave()
 
     def is_supported(self, url: str) -> bool:
-        return bool(re.match(r'https?://(?:www\.)?(?:tiktok\.com/.*|(vm|vt)\.tiktok\.com/.+)', url))
+        return bool(
+            re.match(
+                r"https?://(?:www\.)?(?:tiktok\.com/.*|(vm|vt)\.tiktok\.com/.+)", url
+            )
+        )
 
     def is_playlist(self, url: str) -> bool:
         return False
@@ -21,10 +27,8 @@ class TikTokService(BaseService):
             saved_files = self.ttsave_client.download(
                 url=url,
                 content_type=ContentType.Original,
-                downloads_dir=self.output_path
+                downloads_dir=self.output_path,
             )
-
-
 
             if saved_files is None:
                 raise ValueError("Failed to download TikTok content")
@@ -35,7 +39,7 @@ class TikTokService(BaseService):
                 elif file.endswith(".jpg") or file.endswith(".png"):
                     result.append({"type": "image", "path": file})
                 elif file.endswith(".mp3"):
-                    result.append({"type": "audio", "path": file, "cover":  None})
+                    result.append({"type": "audio", "path": file, "cover": None})
 
             title = saved_files["meta"]["desc"] if saved_files["meta"]["desc"] else ""
 

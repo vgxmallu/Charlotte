@@ -6,6 +6,7 @@ import logging
 
 executor = ThreadPoolExecutor()
 
+
 def translate_sync(text: str, target_language: str) -> str:
     """
     Synchronized function to translate text.
@@ -18,7 +19,8 @@ def translate_sync(text: str, target_language: str) -> str:
     translated = translator.translate(text)
     return translated
 
-async def translate_text(text: str, target_language: str = 'uk') -> str:
+
+async def translate_text(text: str, target_language: str = "uk") -> str:
     """
     Asynchronously translates text using GoogleTranslator.
 
@@ -29,7 +31,9 @@ async def translate_text(text: str, target_language: str = 'uk') -> str:
     loop = asyncio.get_running_loop()
     try:
         # Executing a synchronous function in an asynchronous context
-        translated = await loop.run_in_executor(executor, translate_sync, text, target_language)
+        translated = await loop.run_in_executor(
+            executor, translate_sync, text, target_language
+        )
         return translated
     except Exception as e:
         logging.error(f"Error during translation: {str(e)}")

@@ -14,7 +14,10 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 from aiogram.exceptions import (
-    TelegramAPIError,TelegramBadRequest, TelegramNotFound, TelegramRetryAfter
+    TelegramAPIError,
+    TelegramBadRequest,
+    TelegramNotFound,
+    TelegramRetryAfter,
 )
 from aiogram.utils.i18n import gettext as _
 
@@ -26,6 +29,7 @@ from loader import dp
 class News_Spam(StatesGroup):
     news_spam = State()
     accept_news_spam = State()
+
 
 @dp.message(Command("news_spam"))
 async def news_spam_command(message: Message, state: FSMContext) -> None:
@@ -85,9 +89,7 @@ async def process_spam_news_to_chats(message: Message, state: FSMContext) -> Non
                     continue
                 await asyncio.sleep(5)
                 await message.bot.send_message(
-                    row[0],
-                    message_text,
-                    parse_mode=ParseMode.MARKDOWN_V2
+                    row[0], message_text, parse_mode=ParseMode.MARKDOWN_V2
                 )
                 success_send += 1
             except TelegramNotFound:
@@ -106,13 +108,19 @@ async def process_spam_news_to_chats(message: Message, state: FSMContext) -> Non
 
     end_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    done_message = (
-        _("The mailing has been completed\n"
+    done_message = _(
+        "The mailing has been completed\n"
         "Beginning at {start_time}\n"
         "Ended at {end_time}\n"
         "Number of chats: {total_chat}\n"
         "Successfully sent: {sucсess_send}\n"
-        "erros: {error_send}").format(start_time=start_time, end_time=end_time, total_chat=total_chat, sucсess_send=sucсess_send, error_send=error_send)
+        "erros: {error_send}"
+    ).format(
+        start_time=start_time,
+        end_time=end_time,
+        total_chat=total_chat,
+        sucсess_send=sucсess_send,
+        error_send=error_send,
     )
 
     await bot.send_message(chat_id=chat_id, text=done_message)

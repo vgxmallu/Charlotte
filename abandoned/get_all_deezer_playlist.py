@@ -13,16 +13,16 @@ def get_all_tracks_from_playlist_deezer(url: str) -> list[str]:
         list[str]: A list of track URLs. Returns None if there is an error.
     """
     try:
-        options = {
-            "noplaylist": False,
-            "extract_flat": True
-        }
+        options = {"noplaylist": False, "extract_flat": True}
 
         with yt_dlp.YoutubeDL(options) as ydl:
             playlist_info = ydl.extract_info(url, download=False)
 
-
-        titles = [entry.get('fulltitle') for entry in playlist_info.get('entries', []) if entry.get('fulltitle')]
+        titles = [
+            entry.get("fulltitle")
+            for entry in playlist_info.get("entries", [])
+            if entry.get("fulltitle")
+        ]
 
         return titles if titles else None
 

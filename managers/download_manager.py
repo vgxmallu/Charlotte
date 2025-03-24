@@ -13,13 +13,6 @@ user_tasks: Dict[int, asyncio.Task] = {}
 
 
 class TaskManager:
-    async def is_user_downloading(self, user_id: int, message: types.Message) -> bool:
-        """Check if user already has an active download."""
-        if user_id in user_tasks:
-            await message.reply(_("You already have an active download. Cancel it with /cancel."))
-            return True
-        return False
-
     def add_task(self, user_id: int, task: asyncio.Task) -> None:
         """Add a download task for a user."""
         user_tasks[user_id] = task
@@ -31,9 +24,8 @@ class TaskManager:
 
     def cancel_task(self, user_id: int) -> bool:
         """Cancel a download task for a user."""
-        print(user_tasks)
         if user_id not in user_tasks:
-            return False  # No task to cancel
+            return False
 
         task = user_tasks[user_id]
 
@@ -86,16 +78,24 @@ class MediaHandler:
                 if caption and i == 0:
                     media_group.caption = caption
 
-                group_items = media_items[i:i+10]
+                group_items = media_items[i : i + 10]
                 for item in group_items:
                     if item["type"] == "photo":
-                        media_group.add_photo(media=types.FSInputFile(item["path"]), type=InputMediaType.PHOTO)
+                        media_group.add_photo(
+                            media=types.FSInputFile(item["path"]),
+                            type=InputMediaType.PHOTO,
+                        )
                     elif item["type"] == "video":
-                        media_group.add_video(media=types.FSInputFile(item["path"]), type=InputMediaType.VIDEO)
+                        media_group.add_video(
+                            media=types.FSInputFile(item["path"]),
+                            type=InputMediaType.VIDEO,
+                        )
 
                 if group_items:
                     await bot.send_chat_action(message.chat.id, "upload_video")
-                    await message.answer_media_group(media=media_group.build(), disable_notification=True)
+                    await message.answer_media_group(
+                        media=media_group.build(), disable_notification=True
+                    )
                     await asyncio.sleep(1)
 
             if audio:
@@ -104,7 +104,9 @@ class MediaHandler:
 
             for gif in gifs:
                 await bot.send_chat_action(message.chat.id, "upload_video")
-                await message.answer_animation(animation=types.FSInputFile(gif), disable_notification=True)
+                await message.answer_animation(
+                    animation=types.FSInputFile(gif), disable_notification=True
+                )
         finally:
             await delete_files(temp_medias)
 
@@ -119,13 +121,12 @@ class MediaHandler:
             await message.answer_audio(
                 audio=types.FSInputFile(audio["path"]),
                 disable_notification=True,
-                thumbnail=types.FSInputFile(cover_path)
+                thumbnail=types.FSInputFile(cover_path),
             )
 
             await delete_files([audio["path"], absolute_cover_path])
         else:
             await message.answer_audio(
-                audio=types.FSInputFile(audio["path"]),
-                disable_notification=True
+                audio=types.FSInputFile(audio["path"]), disable_notification=True
             )
             await delete_files([audio["path"]])

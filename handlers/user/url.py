@@ -9,7 +9,14 @@ from filters.url_filter import UrlFilter
 from loader import dp
 from utils import get_service_handler, handle_download_error
 from managers.download_manager import TaskManager, MediaHandler, user_tasks
+from collections import defaultdict
+from asyncio import Semaphore
 
+user_semaphores = defaultdict(lambda: Semaphore(1))
+
+async def download_wrapper(user_id: int, coro):
+    async with user_semaphores[user_id]:
+        return await coro
 
 @dp.message(UrlFilter())
 async def url_handler(message: types.Message) -> None:
@@ -18,8 +25,6 @@ async def url_handler(message: types.Message) -> None:
         return
 
     user_id = message.from_user.id
-    if await TaskManager().is_user_downloading(user_id, message):
-        return
 
     url = message.text
     service = get_service_handler(url)
@@ -29,12 +34,12 @@ async def url_handler(message: types.Message) -> None:
         markup.add(types.InlineKeyboardButton(text=_("Video"), callback_data="video"))
         markup.add(types.InlineKeyboardButton(text=_("Audio"), callback_data="audio"))
 
-        await message.reply(_("Choose a format to download:"), reply_markup=markup.as_markup())
+        await message.reply(
+            _("Choose a format to download:"), reply_markup=markup.as_markup()
+        )
     else:
-        if service.is_playlist(url):
-            task = asyncio.create_task(handle_playlist_download(service, url, message))
-        else:
-            task = asyncio.create_task(handle_single_download(service, url, message))
+        coro = handle_playlist_download(service, url, message) if service.is_playlist(url) else handle_single_download(service, url, message)
+        task = asyncio.create_task(download_wrapper(user_id, coro))
 
         TaskManager().add_task(user_id, task)
 
@@ -54,22 +59,21 @@ async def format_choice_handler(callback_query: types.CallbackQuery):
     service = get_service_handler(url)
 
     if service.name != "Youtube":
-        await message.edit_text(_("The selection format is only available for YouTube."))
+        await message.edit_text(
+            _("The selection format is only available for YouTube.")
+        )
         return
 
-    if choice == "video":
-        task = asyncio.create_task(handle_single_download(service, url, message, format_choice=f"video:{user_id}"))
-    elif choice == "audio":
-        task = asyncio.create_task(handle_single_download(service, url, message, format_choice=f"audio:{user_id}"))
-    else:
-        await message.edit_text(_("Invalid choice."))
-        return
+    coro = handle_single_download(service, url, message, format_choice=f"{choice}:{user_id}")
+    task = asyncio.create_task(download_wrapper(user_id, coro))
 
     TaskManager().add_task(user_id, task)
     await message.delete()
 
 
-async def handle_single_download(service, url: str, message: types.Message, format_choice: Optional[str] = None) -> None:
+async def handle_single_download(
+    service, url: str, message: types.Message, format_choice: Optional[str] = None
+) -> None:
     """Handle download of a single media item."""
     user_id = 0
     assert message.bot, "Bot is not found"
@@ -116,4 +120,5 @@ async def handle_playlist_download(service, url: str, message: types.Message) ->
     except Exception as e:
         await handle_download_error(message, e)
     finally:
+        print("Finish")
         TaskManager().remove_task(message.from_user.id)

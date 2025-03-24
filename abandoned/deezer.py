@@ -101,8 +101,9 @@ class DeezerDownloader:
         for track in tracks:
             yield await self._download_track(track)
 
-
-    async def _download_track(self, url: str, output_path: str = "other/downloadsTemp", format: str = "audio"):
+    async def _download_track(
+        self, url: str, output_path: str = "other/downloadsTemp", format: str = "audio"
+    ):
         """
         Downloads audio from YouTube based on a Deezer track's artist and title.
 
@@ -128,7 +129,9 @@ class DeezerDownloader:
         """
         ydl = yt_dlp.YoutubeDL(self.yt_dlp_options)
 
-        deezer_track_info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
+        deezer_track_info_dict = await asyncio.to_thread(
+            ydl.extract_info, url, download=False
+        )
 
         artist = deezer_track_info_dict.get("description").split("-")[0].strip()
         title = deezer_track_info_dict.get("title").strip()
@@ -137,13 +140,19 @@ class DeezerDownloader:
         video_link = await search_music(artist, title)
 
         try:
-            info_dict = await asyncio.to_thread(ydl.extract_info, video_link, download=False)
+            info_dict = await asyncio.to_thread(
+                ydl.extract_info, video_link, download=False
+            )
             ydl_title = info_dict.get("title")
 
             await asyncio.to_thread(ydl.download, [video_link])
 
-            audio_filename = os.path.join(output_path, f"{sanitize_filename(ydl_title)}.mp3")
-            cover_filename = os.path.join(output_path, f"{sanitize_filename(ydl_title)}.jpg")
+            audio_filename = os.path.join(
+                output_path, f"{sanitize_filename(ydl_title)}.mp3"
+            )
+            cover_filename = os.path.join(
+                output_path, f"{sanitize_filename(ydl_title)}.jpg"
+            )
 
             urllib.request.urlretrieve(cover_url, cover_filename)
 

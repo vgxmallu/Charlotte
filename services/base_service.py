@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class BaseService(ABC):
     @abstractmethod
     def is_supported(self, url: str) -> bool:

@@ -16,6 +16,7 @@ class EmojiTextFilter(BaseFilter):
         __call__(message: types.Message) -> bool:
             Asynchronously checks if the message text matches the predefined text.
     """
+
     def __init__(self, text: str):
         self.text = text
 

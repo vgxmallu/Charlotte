@@ -2,7 +2,10 @@ import logging
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, TIT2, TPE1
 
-def update_metadata(audio_file: str, title: str, artist: str, cover_file: str = None) -> None:
+
+def update_metadata(
+    audio_file: str, title: str, artist: str, cover_file: str = None
+) -> None:
     """
     Updates the MP3 file metadata and adds a cover art.
 
@@ -27,19 +30,21 @@ def update_metadata(audio_file: str, title: str, artist: str, cover_file: str = 
 
         # If there's a cover, add it
         if cover_file:
-            with open(cover_file, 'rb') as img:
+            with open(cover_file, "rb") as img:
                 audio.tags.add(
                     APIC(
                         encoding=3,
-                        mime='image/jpeg',
+                        mime="image/jpeg",
                         type=3,
-                        desc='Cover',
-                        data=img.read()
+                        desc="Cover",
+                        data=img.read(),
                     )
                 )
 
         audio.save()
-        logging.info(f"Metadata and file cover of {audio_file} have been successfully updated.")
+        logging.info(
+            f"Metadata and file cover of {audio_file} have been successfully updated."
+        )
 
     except Exception as e:
         logging.error(f"Error when updating metadata: {str(e)}")

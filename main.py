@@ -29,13 +29,16 @@ async def main():
     await create_table_settings()
     await set_default_commands()
 
-    load_modules(["handlers.user", "handlers.admin"], ignore_files=["__init__.py", "help.py"])
+    load_modules(
+        ["handlers.user", "handlers.admin"], ignore_files=["__init__.py", "help.py"]
+    )
 
     try:
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot, on_startup=on_ready)
     except Exception as e:
         logging.error(f"An error occurred while starting the bot: {e}")
+
 
 def load_modules(plugin_packages, ignore_files=[]):
     ignore_files.append("__init__")
@@ -46,19 +49,16 @@ def load_modules(plugin_packages, ignore_files=[]):
                 logging.info(f"Loading module: {plugin_package}.{name}")
                 importlib.import_module(f"{plugin_package}.{name}")
 
+
 if __name__ == "__main__":
-    log_dir = 'other/logs'
+    log_dir = "other/logs"
     os.makedirs(log_dir, exist_ok=True)
 
-    log_format = '%(asctime)s - %(filename)s - %(funcName)s - %(lineno)d - %(name)s - %(levelname)s - %(message)s'
+    log_format = "%(asctime)s - %(filename)s - %(funcName)s - %(lineno)d - %(name)s - %(levelname)s - %(message)s"
 
-    log_file = os.path.join(log_dir, 'logging.log')
+    log_file = os.path.join(log_dir, "logging.log")
     handler = TimedRotatingFileHandler(
-        log_file,
-        when="midnight",
-        interval=1,
-        backupCount=7,
-        encoding='utf-8'
+        log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8"
     )
     handler.setFormatter(logging.Formatter(log_format))
 

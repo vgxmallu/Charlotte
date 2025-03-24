@@ -17,6 +17,7 @@ class SQLiteDatabaseManager:
         __aexit__: Asynchronously closes the cursor and the connection, commits any pending transactions,
                     and handles any exceptions that occurred.
     """
+
     def __init__(self, mode: str = "production"):
         """
         Initializes the SQLiteDatabaseManager instance.

@@ -1,44 +1,56 @@
-from .base_service import BaseService
+import asyncio
 import logging
 import os
-import asyncio
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 import yt_dlp
+from aiofiles import os as aios
 from yt_dlp.utils import sanitize_filename
 
-from utils import update_metadata, random_cookie_file
+from utils import random_cookie_file, update_metadata
+
+from .base_service import BaseService
 
 
 class YouTubeService(BaseService):
     name = "Youtube"
+    _download_executor = ThreadPoolExecutor(max_workers=10)
+
     def __init__(self, output_path: str = "other/downloadsTemp") -> None:
         super().__init__()
         self.output_path = output_path
-        os.makedirs(self.output_path, exist_ok=True)
-        self.yt_dlp_video_options = {
-                "format": "bv*[filesize < 50M][ext=mp4][vcodec^=avc1] + ba[ext=m4a]",
-                "outtmpl": f"{self.output_path}/%(title)s.%(ext)s",
-                'noplaylist': True,
-                "cookiefile": random_cookie_file()
-            }
-        self.yt_dlp_audio_options = {
-                "format": "m4a/bestaudio/best",
-                "writethumbnail": True,
-                "outtmpl": f"{self.output_path}/{sanitize_filename('%(title)s')}",
-                "cookiefile": random_cookie_file(),
-                "postprocessors": [
-                    {
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": "mp3",
-                    }
-                ],
-            }
 
+    def _get_video_options(self):
+        return {
+            "format": "bv*[filesize < 50M][ext=mp4] + ba[ext=m4a]",
+            "outtmpl": f"{self.output_path}/%(id)s_%(title)s.%(ext)s",
+            "noplaylist": True,
+            "cookiefile": random_cookie_file(),
+        }
+
+    def _get_audio_options(self):
+        return {
+            "format": "m4a/bestaudio/best",
+            "writethumbnail": True,
+            "outtmpl": f"{self.output_path}/%(id)s_{sanitize_filename('%(title)s')}",
+            "cookiefile": random_cookie_file(),
+            "postprocessors": [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                }
+            ],
+        }
 
     def is_supported(self, url: str) -> bool:
-        return bool(re.match(r'https?://(?:www\.)?(?:m\.)?(?:youtu\.be/|youtube\.com/(?:shorts/|watch\?v=))([\w-]+)', url))
+        return bool(
+            re.match(
+                r"https?://(?:www\.)?(?:m\.)?(?:youtu\.be/|youtube\.com/(?:shorts/|watch\?v=))([\w-]+)",
+                url,
+            )
+        )
 
     def is_playlist(self, url: str) -> bool:
         return False
@@ -47,58 +59,87 @@ class YouTubeService(BaseService):
         return True
 
     async def download(self, url: str, format_choice: Optional[str] = None) -> list:
-        if format_choice == "video":
-            return await self.download_video(url)
-        elif format_choice == "audio":
+        if format_choice == "audio":
             return await self.download_audio(url)
         return await self.download_video(url)
 
     async def download_video(self, url: str) -> list:
-        result = []
-
         try:
-            with yt_dlp.YoutubeDL(self.yt_dlp_video_options) as ydl:
-                info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
-                if info_dict is None:
-                    return result
-                title = info_dict.get("title", "video")
-                filename = ydl.prepare_filename(info_dict)
+            options = self._get_video_options()
+            with yt_dlp.YoutubeDL(options) as ydl:
+                loop = asyncio.get_event_loop()
 
-                await asyncio.to_thread(ydl.download, [url])
+                info_dict = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: ydl.extract_info(url, download=False)
+                )
+                if not info_dict:
+                    raise ValueError("Failed to get video info")
 
-                result.append({"type": "video", "path": filename, "title": title})
+                await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: ydl.download([url])
+                )
+
+                return [{
+                    "type": "video",
+                    "path": ydl.prepare_filename(info_dict),
+                    "title": info_dict.get("title", "video")
+                }]
+
         except Exception as e:
-            logging.error(f"Error downloading YouTube video: {str(e)}")
-
-        return result
+            logging.error(f"YouTube video error: {str(e)}", exc_info=True)
+            raise
 
     async def download_audio(self, url: str) -> list:
-        result = []
         try:
-            with yt_dlp.YoutubeDL(self.yt_dlp_audio_options) as ydl:
-                info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
-                if info_dict is None:
-                    raise ValueError(f"Failed to extract info from the provided URL. {url}")
-                title = info_dict.get("title", "audio")
-                author = info_dict.get("uploader", "unknown")
+            options = self._get_audio_options()
+            with yt_dlp.YoutubeDL(options) as ydl:
+                loop = asyncio.get_event_loop()
 
-                audio_filename = os.path.join(self.output_path, f"{sanitize_filename(title)}.mp3")
-                thumbnail_filename = os.path.join(self.output_path, f"{sanitize_filename(title)}.jpg")
-                if not os.path.exists(thumbnail_filename):
-                    thumbnail_filename = os.path.join(self.output_path, f"{sanitize_filename(title)}.webp")
+                info_dict = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: ydl.extract_info(url, download=False)
+                )
+                if not info_dict:
+                    raise ValueError("Failed to get audio info")
 
-                await asyncio.to_thread(ydl.download, [url])
+                await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: ydl.download([url])
+                )
 
-                update_metadata(audio_filename, title=title, artist=author)
+                base_path = os.path.join(
+                    self.output_path,
+                    f"{info_dict['id']}_{sanitize_filename(info_dict['title'])}"
+                )
+                audio_path = f"{base_path}.mp3"
+                thumbnail_path = f"{base_path}.jpg"
 
-                if os.path.exists(audio_filename) and os.path.exists(thumbnail_filename):
-                    result.append({"type": "audio", "path": audio_filename, "cover": thumbnail_filename})
+                if not await aios.path.exists(thumbnail_path):
+                    thumbnail_path = f"{base_path}.webp"
 
-                print(result)
-                return result
+                await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: update_metadata(
+                        audio_path,
+                        title=info_dict.get("title", "audio"),
+                        artist=info_dict.get("uploader", "unknown"),
+                        cover_file=thumbnail_path
+                    )
+                )
+
+                return [{
+                    "type": "audio",
+                    "path": audio_path,
+                    "cover": thumbnail_path
+                }]
+
         except Exception as e:
-            logging.error(f"Error downloading YouTube Audio: {str(e)}")
-            return result
+            logging.error(f"YouTube audio error: {str(e)}", exc_info=True)
+            raise
+
+
 
 # import logging
 # import os
