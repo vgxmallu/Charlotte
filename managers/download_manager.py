@@ -1,7 +1,6 @@
 from typing import List, Dict
 from aiogram import types
 import asyncio
-from aiogram.utils.i18n import gettext as _
 from utils import delete_files, truncate_string
 from aiogram.enums import InputMediaType
 from aiogram.utils.media_group import MediaGroupBuilder
@@ -59,7 +58,7 @@ class MediaHandler:
             if item["type"] == "image":
                 media_items.append({"type": "photo", "path": absolute_path})
             elif item["type"] == "video":
-                media_items.append({"type": "video", "path": absolute_path})
+                media_items.append({"type": "video", "path": absolute_path, "width": item.get("width", None), "height": item.get("height", None), "duration": item.get("duration", None)})
             elif item["type"] == "audio":
                 audio = item
                 continue
@@ -89,6 +88,10 @@ class MediaHandler:
                         media_group.add_video(
                             media=types.FSInputFile(item["path"]),
                             type=InputMediaType.VIDEO,
+                            supports_streaming=True,
+                            width=item["width"],
+                            height=item["height"],
+                            duration=item["duration"]
                         )
 
                 if group_items:

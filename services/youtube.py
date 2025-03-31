@@ -24,8 +24,8 @@ class YouTubeService(BaseService):
 
     def _get_video_options(self):
         return {
-            "format": "bv*[filesize < 50M][ext=mp4] + ba[ext=m4a]",
-            "outtmpl": f"{self.output_path}/%(id)s_%(title)s.%(ext)s",
+            "format": "bv*[filesize < 50M][ext=mp4][vcodec^=avc1] + ba[ext=m4a]",
+            "outtmpl": f"{self.output_path}/%(id)s_{sanitize_filename('%(title)s')}.%(ext)s",
             "noplaylist": True,
             "cookiefile": random_cookie_file(),
         }
@@ -73,6 +73,7 @@ class YouTubeService(BaseService):
                     self._download_executor,
                     lambda: ydl.extract_info(url, download=False)
                 )
+
                 if not info_dict:
                     raise ValueError("Failed to get video info")
 
@@ -84,7 +85,10 @@ class YouTubeService(BaseService):
                 return [{
                     "type": "video",
                     "path": ydl.prepare_filename(info_dict),
-                    "title": info_dict.get("title", "video")
+                    "title": info_dict.get("title", "video"),
+                    "width": info_dict.get("width", 0),
+                    "height": info_dict.get("height", 0),
+                    "duration": info_dict.get("duration", 0),
                 }]
 
         except Exception as e:
