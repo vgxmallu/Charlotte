@@ -1,12 +1,15 @@
-from .base_service import BaseService
-import re
+import asyncio
 import logging
 import os
-import asyncio
+import re
+from functools import partial
+
 import aiofiles
 import aiohttp
+
 from utils import login_user, truncate_string
-from functools import partial
+
+from .base_service import BaseService
 
 # Настройка логирования
 logging.basicConfig(
@@ -115,7 +118,10 @@ class InstagramService(BaseService):
 
         except Exception as e:
             logger.error(f"Error downloading Instagram media: {str(e)}", exc_info=True)
-            return []
+            return [{
+                "type": "error",
+                "message": e
+            }]
 
 
 async def run_in_thread(func, *args):

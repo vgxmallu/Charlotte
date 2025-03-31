@@ -27,6 +27,8 @@ async def url_handler(message: types.Message) -> None:
     user_id = message.from_user.id
 
     url = message.text
+    if not url:
+        return
     service = get_service_handler(url)
 
     if service.name == "Youtube":
@@ -84,7 +86,10 @@ async def handle_single_download(
             content = await service.download(url, format)
         else:
             await message.bot.send_chat_action(message.chat.id, "record_video")
-            user_id = message.from_user.id
+            user = message.from_user
+            if user is None:
+                return
+            user_id = user.id
             content = await service.download(url)
 
         if not content:
@@ -93,7 +98,7 @@ async def handle_single_download(
         await MediaHandler.send_media_content(message, content)
 
     except Exception as e:
-        await handle_download_error(message, e)
+        await handle_download_error(message, e, url)
 
     finally:
         TaskManager().remove_task(int(user_id))
@@ -118,7 +123,6 @@ async def handle_playlist_download(service, url: str, message: types.Message) ->
 
         await message.reply(_("Download completed."))
     except Exception as e:
-        await handle_download_error(message, e)
+        await handle_download_error(message, e, url)
     finally:
-        print("Finish")
         TaskManager().remove_task(message.from_user.id)

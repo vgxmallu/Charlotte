@@ -91,7 +91,10 @@ class PinterestService(BaseService):
 
         except Exception as e:
             logging.error(f"Failed to download Pinterest: {e}")
-            return result
+            return [{
+                "type": "error",
+                "message": e
+            }]
 
     async def _get_pin_info(self, pin_id: int) -> Dict[str, Any]:
         url = "https://www.pinterest.com/resource/PinResource/get/"

@@ -112,7 +112,10 @@ class AppleMusicService(BaseService):
 
         except Exception as e:
             logging.error(f"Error downloading YouTube Audio: {e}", exc_info=True)
-            return result
+            return [{
+                "type": "error",
+                "message": e
+            }]
 
     # def get_playlist_tracks(self, url: str) -> list[str]:
     #     match = re.search(r"playlist/([^/?]+)", url)

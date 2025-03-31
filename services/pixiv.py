@@ -64,6 +64,10 @@ class PixivService(BaseService):
 
         except Exception as e:
             logging.error(f"Error downloading Pixiv image: {str(e)}")
+            return [{
+                "type": "error",
+                "message": e
+            }]
 
         return result
 

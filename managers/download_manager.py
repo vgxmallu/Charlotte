@@ -1,10 +1,12 @@
-from typing import List, Dict
-from aiogram import types
 import asyncio
-from utils import delete_files, truncate_string
+from pathlib import Path
+from typing import Dict, List
+
+from aiogram import types
 from aiogram.enums import InputMediaType
 from aiogram.utils.media_group import MediaGroupBuilder
-from pathlib import Path
+
+from utils import delete_files, handle_download_error, truncate_string
 
 MediaContent = Dict[str, str]
 MediaList = List[MediaContent]
@@ -46,26 +48,31 @@ class MediaHandler:
         media_items = []
         caption = None
 
-        for item in content:
-            if item["type"] == "title":
-                caption = truncate_string(item["title"])
-                continue
+        try:
+            for item in content:
+                if item["type"] == "error":
+                    raise ValueError(item["message"])
+                if item["type"] == "title":
+                    caption = truncate_string(item["title"])
+                    continue
 
-            media_path = Path(item["path"])
-            absolute_path = media_path.resolve()
-            temp_medias.append(absolute_path)
+                media_path = Path(item["path"])
+                absolute_path = media_path.resolve()
+                temp_medias.append(absolute_path)
 
-            if item["type"] == "image":
-                media_items.append({"type": "photo", "path": absolute_path})
-            elif item["type"] == "video":
-                media_items.append({"type": "video", "path": absolute_path, "width": item.get("width", None), "height": item.get("height", None), "duration": item.get("duration", None)})
-            elif item["type"] == "audio":
-                audio = item
-                continue
-            elif item["type"] == "gif":
-                gifs.append(media_path)
-                continue
-
+                if item["type"] == "image":
+                    media_items.append({"type": "photo", "path": absolute_path})
+                elif item["type"] == "video":
+                    media_items.append({"type": "video", "path": absolute_path, "width": item.get("width", None), "height": item.get("height", None), "duration": item.get("duration", None)})
+                elif item["type"] == "audio":
+                    audio = item
+                    continue
+                elif item["type"] == "gif":
+                    gifs.append(media_path)
+                    continue
+        except Exception as e:
+            await delete_files(temp_medias)
+            await handle_download_error(message, e, None)
         try:
             bot = message.bot
             if bot is None:
@@ -110,26 +117,31 @@ class MediaHandler:
                 await message.answer_animation(
                     animation=types.FSInputFile(gif), disable_notification=True
                 )
+        except Exception as e:
+            await handle_download_error(message, e, None)
         finally:
             await delete_files(temp_medias)
 
     @staticmethod
     async def send_audio(message: types.Message, audio: Dict) -> None:
         """Send audio file with or without cover."""
-        cover_path = audio.get("cover")
-        if cover_path:
-            cover_path = Path(cover_path)
-            absolute_cover_path = cover_path.resolve()
+        cover_path = audio.get("cover", None)
+        try:
+            if cover_path:
+                cover_path = Path(cover_path)
+                absolute_cover_path = cover_path.resolve()
 
-            await message.answer_audio(
-                audio=types.FSInputFile(audio["path"]),
-                disable_notification=True,
-                thumbnail=types.FSInputFile(cover_path),
-            )
+                await message.answer_audio(
+                    audio=types.FSInputFile(audio["path"]),
+                    disable_notification=True,
+                    thumbnail=types.FSInputFile(cover_path),
+                )
 
-            await delete_files([audio["path"], absolute_cover_path])
-        else:
-            await message.answer_audio(
-                audio=types.FSInputFile(audio["path"]), disable_notification=True
-            )
-            await delete_files([audio["path"]])
+                await delete_files([audio["path"], absolute_cover_path])
+            else:
+                await message.answer_audio(
+                    audio=types.FSInputFile(audio["path"]), disable_notification=True
+                )
+                await delete_files([audio["path"]])
+        except Exception as e:
+            await handle_download_error(message, e, None)

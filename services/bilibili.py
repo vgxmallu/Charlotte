@@ -1,11 +1,12 @@
-from .base_service import BaseService
+import asyncio
 import logging
 import os
-import asyncio
 import re
 from concurrent.futures import ThreadPoolExecutor
 
 import yt_dlp
+
+from .base_service import BaseService
 
 
 class BiliBiliService(BaseService):
@@ -30,8 +31,6 @@ class BiliBiliService(BaseService):
         return False
 
     async def download(self, url: str) -> list:
-        result = []
-
         try:
             options = self._get_video_options()
             with yt_dlp.YoutubeDL(options) as ydl:
@@ -56,7 +55,13 @@ class BiliBiliService(BaseService):
                 }]
         except yt_dlp.DownloadError as e:
             logging.error(f"Error downloading YouTube video: {str(e)}")
+            return [{
+                "type": "error",
+                "message": e
+            }]
         except Exception as e:
             logging.error(f"Error downloading YouTube video: {str(e)}")
-
-        return result
+            return [{
+                "type": "error",
+                "message": e
+            }]

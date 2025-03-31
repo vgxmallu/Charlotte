@@ -95,6 +95,10 @@ class TwitterService(BaseService):
 
         except Exception as e:
             logging.error(f"Error downloading Twitter video: {str(e)}")
+            return [{
+                "type": "error",
+                "message": e
+            }]
 
         return result
 

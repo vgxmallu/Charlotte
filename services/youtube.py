@@ -141,7 +141,10 @@ class YouTubeService(BaseService):
 
         except Exception as e:
             logging.error(f"YouTube audio error: {str(e)}", exc_info=True)
-            raise
+            return [{
+                "type": "error",
+                "message": e
+            }]
 
 
 

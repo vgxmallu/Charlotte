@@ -112,7 +112,10 @@ class SpotifyService(BaseService):
 
         except Exception as e:
             logging.error(f"Error downloading YouTube Audio: {str(e)}")
-            return result
+            return [{
+                "type": "error",
+                "message": e
+            }]
 
     async def get_playlist_tracks(self, url: str) -> list[str]:
         tracks = []
