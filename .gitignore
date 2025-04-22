@@ -167,3 +167,6 @@ config/.env
 test
 session.json
 cookies/*
+.DS_Store
+/har_and_cookies
+/generated_media

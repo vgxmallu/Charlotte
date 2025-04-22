@@ -17,6 +17,11 @@ async def handle_download_error(message: types.Message, error: Exception, url: s
         await message.answer(
             _("Sorry, the download returned empty content. Please check the link and try again.")
         )
+    elif isinstance(error, ValueError) and str(error) == "Youtube Video size is too large":
+        await message.answer(
+            _("Wow, you tried to download too heavy video. Don't do this, pleeease 😭")
+        )
+        return
     else:
         logging.error(f"Download error: {error}")
         await message.answer(_("Sorry, there was an error. Try again later 🧡"))

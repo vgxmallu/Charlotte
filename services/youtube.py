@@ -65,7 +65,13 @@ class YouTubeService(BaseService):
 
     async def download_video(self, url: str) -> list:
         try:
+            is_valid, best_format = check_video_size(url)
+
+            if is_valid is False and best_format is None:
+                raise ValueError("Youtube Video size is too large")
+
             options = self._get_video_options()
+            options["format"] = f"{best_format["format_id"]}+bestaudio[ext=m4a]/best[ext=mp4]/best"
             with yt_dlp.YoutubeDL(options) as ydl:
                 loop = asyncio.get_event_loop()
 
@@ -147,6 +153,41 @@ class YouTubeService(BaseService):
             }]
 
 
+def check_video_size(url, max_size_mb=50):
+    ydl_opts = {
+        'skip_download': True,
+        'force_ipv4': True,
+        'quiet': True,
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+
+    formats = info.get('formats', [])
+    suitable_formats = []
+
+    for f in formats:
+        ext = f.get('ext')
+        vcodec = f.get('vcodec', '')
+        filesize = f.get('filesize') or f.get('filesize_approx')  # На всякий случай
+
+        if not filesize or ext != 'mp4' or not vcodec.startswith('avc1'):
+            continue
+
+        size_mb = filesize / (1024 * 1024)
+        if size_mb <= max_size_mb:
+            suitable_formats.append(f)
+
+    if suitable_formats:
+        best_format = max(
+            suitable_formats,
+            key=lambda x: (
+                x.get('height', 0),
+                x.get('tbr', 0)
+            )
+        )
+        return True, best_format
+    else:
+        return False, None
 
 # import logging
 # import os
