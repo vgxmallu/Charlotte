@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import re
@@ -8,6 +9,7 @@ import aiofiles
 import aiohttp
 import yt_dlp
 from aiofiles import os as aios
+from bs4 import BeautifulSoup
 from yt_dlp.utils import sanitize_filename
 
 from utils import (
@@ -45,12 +47,13 @@ class AppleMusicService(BaseService):
 
     def is_supported(self, url: str) -> bool:
         return bool(
-            re.match(r"https?://music\.apple\.com/.*/album/.+/\d+(\?.*)?$", url)
+            re.match(r"https:\/\/music\.apple\.com\/[\w]{2}\/(song\/([\w-]+)\/(\d+)|album\/([^\/]+)\/(\d+)(\?i=(\d+))?|playlist\/([\w-]+)\/([\w.-]+))", url)
         )
 
     def is_playlist(self, url: str) -> bool:
-        return False
-
+        return bool(
+            re.match(r"https:\/\/music\.apple\.com\/[\w]{2}\/playlist\/([\w-]+)\/([\w.-]+)", url)
+        )
     async def download(self, url: str) -> list:
         result = []
 
@@ -117,36 +120,52 @@ class AppleMusicService(BaseService):
                 "message": e
             }]
 
-    # def get_playlist_tracks(self, url: str) -> list[str]:
-    #     match = re.search(r"playlist/([^/?]+)", url)
-    #     if not match:
-    #         logging.error(f"Invalid playlist URL: {url}")
-    #         return []
+    async def get_playlist_tracks(self, url: str) -> list[str]:
+        match = re.search(r"playlist/([^/?]+)", url)
+        if not match:
+            logging.error(f"Invalid playlist URL: {url}")
+            return []
 
-    #     playlist_id = match.group(1)
-    #     all_tracks = []
-    #     offset = 0
-    #     limit = 100
+        playlist_id = match.group(1)
+        logging.info(f"Parsing playlist with ID: {playlist_id}")
 
-    #     while True:
-    #         try:
-    #             results = spotify.playlist_items(playlist_id, limit=limit, offset=offset)
-    #             tracks = results["items"]
-    #             all_tracks.extend(tracks)
-    #             if len(tracks) < limit:
-    #                 break
-    #             offset += limit
-    #         except Exception as e:
-    #             logging.error(f"Error fetching tracks: {e}")
-    #             break
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
 
-    #     track_urls = []
+                    soup = BeautifulSoup(await response.text(), 'html.parser')
 
-    #     for item in all_tracks:
-    #         track = item.get("track")
-    #         if track:
-    #             track_url = track.get("external_urls", {}).get("spotify")
-    #             if track_url:
-    #                 track_urls.append(track_url)
+                    script_tag = soup.find('script', {'id': 'serialized-server-data'})
+                    if not script_tag:
+                        logging.error("Не удалось найти JSON в странице.")
+                        return []
 
-    #     return track_urls
+                    json_data = json.loads(script_tag.string)
+
+                    track_urls = []
+
+                    sections = json_data[0].get('data', {}).get('sections', [])
+                    for section in sections:
+                        if "track-list" in section.get("id", ""):
+                            tracks = section.get('items', [])
+                            for track in tracks:
+                                try:
+                                    track_id = track["id"]
+                                    match = re.search(r" - (\d+)$", track_id)
+                                    if match:
+                                        track_id_extracted = match.group(1)
+                                        track_urls.append("https://music.apple.com/pl/song/"+track_id_extracted)
+                                except (KeyError, IndexError):
+                                    logging.warning(f"Не удалось извлечь URL для трека: {track}")
+
+                            break
+
+                    return track_urls
+
+        except aiohttp.ClientError as e:
+            logging.error(f"Ошибка при запросе страницы: {e}")
+        except json.JSONDecodeError:
+            logging.error("Ошибка при декодировании JSON.")
+
+        return []

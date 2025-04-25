@@ -53,7 +53,7 @@ class UrlFilter(BaseFilter):
                         message.text,
                     ),
                     re.match(
-                        r"https?://music\.apple\.com/.*/album/.+/\d+(\?.*)?$",
+                        r"https:\/\/music\.apple\.com\/[\w]{2}\/(song\/([\w-]+)\/(\d+)|album\/([^\/]+)\/(\d+)(\?i=(\d+))?|playlist\/([\w-]+)\/([\w.-]+))",
                         message.text,
                     ),
                     # re.match(r'https?://deezer\.page\.link/([\w-]+)', message.text),
