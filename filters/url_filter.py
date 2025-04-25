@@ -49,6 +49,10 @@ class UrlFilter(BaseFilter):
                         message.text,
                     ),
                     re.match(
+                        r"https:\/\/music\.youtube\.com\/(watch\?v=[\w-]+(&[\w=-]+)*|playlist\?list=[\w-]+(&[\w=-]+)*)",
+                        message.text,
+                    ),
+                    re.match(
                         r"https?://music\.apple\.com/.*/album/.+/\d+(\?.*)?$",
                         message.text,
                     ),

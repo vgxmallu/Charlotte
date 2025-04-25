@@ -5,6 +5,7 @@ from .soundcloud import SoundCloudService
 from .spotify import SpotifyService
 from .tiktok import TikTokService
 from .youtube import YouTubeService
+from .ytmusic import YtMusicService
 from .instagram import InstagramService
 from .twitter import TwitterService
 from .pixiv import PixivService
@@ -17,6 +18,7 @@ __all__ = [
     "SpotifyService",
     "TikTokService",
     "YouTubeService",
+    "YtMusicService",
     "InstagramService",
     "TwitterService",
     "PixivService",

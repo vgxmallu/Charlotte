@@ -1,6 +1,7 @@
 from services import (
     TikTokService,
     YouTubeService,
+    YtMusicService,
     SoundCloudService,
     SpotifyService,
     PinterestService,
@@ -26,6 +27,7 @@ def get_service_handler(url):
 
 
 register_service("youtube", YouTubeService())
+register_service("ytmusic", YtMusicService())
 register_service("soundcloud", SoundCloudService())
 register_service("tiktok", TikTokService())
 register_service("spotify", SpotifyService())
