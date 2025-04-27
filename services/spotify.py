@@ -10,6 +10,7 @@ import yt_dlp
 from aiofiles import os as aios
 from yt_dlp.utils import sanitize_filename
 
+from services.base_service import BaseService
 from utils import (
     get_access_token,
     get_spotify_author,
@@ -18,7 +19,7 @@ from utils import (
     update_metadata,
 )
 
-from .base_service import BaseService
+logger = logging.getLogger(__name__)
 
 
 class SpotifyService(BaseService):
@@ -54,7 +55,7 @@ class SpotifyService(BaseService):
 
         artist, title, cover_url = await get_spotify_author(url)
         if not artist or not title:
-            logging.error("Failed to get artist and title from Spotify")
+            logger.error("Failed to get artist and title from Spotify")
             return result
 
         video_link = await search_music(artist, title)
@@ -112,7 +113,7 @@ class SpotifyService(BaseService):
             return result
 
         except Exception as e:
-            logging.error(f"Error downloading YouTube Audio: {str(e)}")
+            logger.error(f"Error downloading YouTube Audio: {str(e)}")
             return [{
                 "type": "error",
                 "message": e
@@ -124,7 +125,7 @@ class SpotifyService(BaseService):
 
         match = re.search(r"playlist/([^/?]+)", url)
         if not match:
-            logging.error(f"Invalid playlist URL: {url}")
+            logger.error(f"Invalid playlist URL: {url}")
             return []
 
         try:
@@ -148,5 +149,5 @@ class SpotifyService(BaseService):
                             tracks.append(track["track"]["external_urls"]["spotify"])
 
         except Exception as e:
-            logging.error(f"Error fetching playlist tracks: {e}")
+            logger.error(f"Error fetching playlist tracks: {e}")
         return tracks

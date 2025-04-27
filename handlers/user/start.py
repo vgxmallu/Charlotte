@@ -10,6 +10,8 @@ from functions.db import db_add_chat
 from loader import dp
 from utils.language_middleware import CustomMiddleware, i18n
 
+logger = logging.getLogger(__name__)
+
 
 @dp.message(CommandStart())
 async def start_command(message: Message, state: FSMContext):
@@ -30,4 +32,4 @@ async def start_command(message: Message, state: FSMContext):
             parse_mode=ParseMode.MARKDOWN,
         )
     except Exception as err:
-        logging.error(f"Error handling /start command: {err}")
+        logger.error(f"Error handling /start command: {err}")

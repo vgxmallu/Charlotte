@@ -7,9 +7,11 @@ import aiofiles
 import aiohttp
 from fake_useragent import UserAgent
 
-from .base_service import BaseService
+from services.base_service import BaseService
 
 ua = UserAgent(platforms="desktop")
+
+logger = logging.getLogger(__name__)
 
 
 class PixivService(BaseService):
@@ -63,7 +65,7 @@ class PixivService(BaseService):
                 result.append({"type": "image", "path": filename})
 
         except Exception as e:
-            logging.error(f"Error downloading Pixiv image: {str(e)}")
+            logger.error(f"Error downloading Pixiv image: {str(e)}")
             return [{
                 "type": "error",
                 "message": e

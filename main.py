@@ -8,36 +8,64 @@ from logging.handlers import TimedRotatingFileHandler
 from database.database_manager import create_table_settings
 from loader import bot, dp
 from utils.language_middleware import CustomMiddleware, i18n
+from utils.register_services import initialize_services
 from utils.set_bot_commands import set_default_commands
 
 # Initialize CustomMiddleware and connect it to dispatcher
 CustomMiddleware(i18n=i18n).setup_dp(dp)
 
+# Setup Logger
+log_dir = "other/logs"
+os.makedirs(log_dir, exist_ok=True)
 
-@dp.startup()
-async def on_ready():
-    """
-    This function is called when the bot is ready.
-    """
-    logging.info("Bot is ready")
+log_format = "%(asctime)s - %(filename)s - %(funcName)s - %(lineno)d - %(name)s - %(levelname)s - %(message)s"
+log_file = os.path.join(log_dir, "logging.log")
 
+# Файл для логирования с ротацией
+file_handler = TimedRotatingFileHandler(
+    log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8"
+)
+file_handler.setFormatter(logging.Formatter(log_format))
 
+# Консольный обработчик без цветов
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter(log_format))
+
+# Установка логирования
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)  # Устанавливаем уровень на INFO
+
+# Проверим, не добавлен ли уже обработчик для консоли
+if not logger.hasHandlers():
+    logger.addHandler(file_handler)  # Для записи в файл
+    logger.addHandler(console_handler)  # Для вывода в консоль
+
+# Bot Startup
 async def main():
     """
     The main asynchronous function to start the bot and perform initial setup.
     """
-    await create_table_settings()
-    await set_default_commands()
-
-    load_modules(
-        ["handlers.user", "handlers.admin"], ignore_files=["__init__.py", "help.py"]
-    )
+    logger.info("Bot is starting...")
 
     try:
+        logger.info("Setting up database...")
+        await create_table_settings()
+
+        logger.info("Setting default commands...")
+        await set_default_commands()
+
+        logger.info("Loading modules...")
+        load_modules(
+            ["handlers.user", "handlers.admin"], ignore_files=["__init__.py", "help.py"]
+        )
+
+        logger.info("Initializing services...")
+        initialize_services()
+
         await bot.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot, on_startup=on_ready)
+        await dp.start_polling(bot)
     except Exception as e:
-        logging.error(f"An error occurred while starting the bot: {e}")
+        logger.error(f"An error occurred while starting the bot: {e}")
 
 
 def load_modules(plugin_packages, ignore_files=[]):
@@ -46,24 +74,9 @@ def load_modules(plugin_packages, ignore_files=[]):
         package = importlib.import_module(plugin_package)
         for _, name, is_pkg in pkgutil.iter_modules(package.__path__):
             if not is_pkg and name not in ignore_files:
-                logging.info(f"Loading module: {plugin_package}.{name}")
+                logger.info(f"Loading module: {plugin_package}.{name}")
                 importlib.import_module(f"{plugin_package}.{name}")
 
 
 if __name__ == "__main__":
-    log_dir = "other/logs"
-    os.makedirs(log_dir, exist_ok=True)
-
-    log_format = "%(asctime)s - %(filename)s - %(funcName)s - %(lineno)d - %(name)s - %(levelname)s - %(message)s"
-
-    log_file = os.path.join(log_dir, "logging.log")
-    handler = TimedRotatingFileHandler(
-        log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8"
-    )
-    handler.setFormatter(logging.Formatter(log_format))
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.ERROR)
-    logger.addHandler(handler)
-
     asyncio.run(main())

@@ -6,7 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 import yt_dlp
 
-from .base_service import BaseService
+from services.base_service import BaseService
+
+logger = logging.getLogger(__name__)
 
 
 class BiliBiliService(BaseService):
@@ -54,13 +56,13 @@ class BiliBiliService(BaseService):
                     "title": info_dict.get("title", "video")
                 }]
         except yt_dlp.DownloadError as e:
-            logging.error(f"Error downloading YouTube video: {str(e)}")
+            logger.error(f"Error downloading YouTube video: {str(e)}")
             return [{
                 "type": "error",
                 "message": e
             }]
         except Exception as e:
-            logging.error(f"Error downloading YouTube video: {str(e)}")
+            logger.error(f"Error downloading YouTube video: {str(e)}")
             return [{
                 "type": "error",
                 "message": e

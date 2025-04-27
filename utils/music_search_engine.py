@@ -5,6 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from ytmusicapi import YTMusic
 
+logger = logging.getLogger(__name__)
+
 
 _search_executor = ThreadPoolExecutor(max_workers=5)
 
@@ -27,9 +29,9 @@ async def search_music(artist: str, title: str) -> Optional[str]:
             if track['duration_seconds'] <= 600:
                 return f"https://music.youtube.com/watch?v={track['videoId']}"
 
-        logging.warning("No tracks under 600 seconds found")
+        logger.warning("No tracks under 600 seconds found")
         return None
 
     except Exception as e:
-        logging.error(f"Music search error: {str(e)}", exc_info=True)
+        logger.error(f"Music search error: {str(e)}", exc_info=True)
         return None

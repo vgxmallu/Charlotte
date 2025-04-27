@@ -1,7 +1,10 @@
-import aiohttp
 import logging
-from bs4 import BeautifulSoup
 import re
+
+import aiohttp
+from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 
 async def get_applemusic_author(url: str):
@@ -17,7 +20,7 @@ async def get_applemusic_author(url: str):
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status != 200:
-                    logging.error(f"Error HTTP {response.status} from request {url}")
+                    logger.error(f"Error HTTP {response.status} from request {url}")
                     return None, None, None
 
                 html_content = await response.text(encoding="utf-8")
@@ -33,7 +36,7 @@ async def get_applemusic_author(url: str):
                 )
 
                 if not track_title or not artist_name:
-                    logging.warning(
+                    logger.warning(
                         f"Could not identify the track or artist from the header: {title}"
                     )
                     return None, None, None
@@ -57,5 +60,5 @@ async def get_applemusic_author(url: str):
                 return artist_name, track_title, best_image_url
 
     except Exception as e:
-        logging.error(f"Apple Music parsing error: {str(e)}")
+        logger.error(f"Apple Music parsing error: {str(e)}")
         return None, None, None

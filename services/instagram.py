@@ -9,13 +9,8 @@ import aiohttp
 
 from utils import login_user, truncate_string
 
-from .base_service import BaseService
+from services.base_service import BaseService
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
 logger = logging.getLogger(__name__)
 
 

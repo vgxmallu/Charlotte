@@ -1,5 +1,8 @@
-import aiofiles.os
 import logging
+
+import aiofiles.os
+
+logger = logging.getLogger(__name__)
 
 
 async def delete_files(files=None):
@@ -19,10 +22,10 @@ async def delete_files(files=None):
             if await aiofiles.os.path.exists(filename):
                 await aiofiles.os.remove(filename)
                 deleted_files.append(filename)
-                logging.info(f"Deleted file: {filename}")
+                logger.info(f"Deleted file: {filename}")
             else:
-                logging.warning(f"File not found: {filename}")
+                logger.warning(f"File not found: {filename}")
         except Exception as e:
-            logging.error(f"Error deleting file {filename}: {e}")
+            logger.error(f"Error deleting file {filename}: {e}")
 
     return deleted_files

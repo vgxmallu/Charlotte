@@ -6,6 +6,8 @@ from aiogram.utils.i18n import gettext as _
 
 from config.secrets import ADMIN_ID
 
+logger = logging.getLogger(__name__)
+
 
 async def handle_download_error(message: types.Message, error: Exception, url: str | None) -> None:
     """Handle various download errors and send appropriate messages."""
@@ -23,7 +25,7 @@ async def handle_download_error(message: types.Message, error: Exception, url: s
         )
         return
     else:
-        logging.error(f"Download error: {error}")
+        logger.error(f"Download error: {error}")
         await message.answer(_("Sorry, there was an error. Try again later 🧡"))
     bot = message.bot
     if bot is None:

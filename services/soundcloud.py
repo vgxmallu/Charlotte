@@ -10,9 +10,10 @@ import yt_dlp
 from aiofiles import os as aios
 from yt_dlp.utils import sanitize_filename
 
+from services.base_service import BaseService
 from utils import random_cookie_file, update_metadata
 
-from .base_service import BaseService
+logger = logging.getLogger(__name__)
 
 
 class SoundCloudService(BaseService):
@@ -111,7 +112,7 @@ class SoundCloudService(BaseService):
             return result
 
         except Exception as e:
-            logging.error(f"Error downloading YouTube Audio: {str(e)}")
+            logger.error(f"Error downloading YouTube Audio: {str(e)}")
             return [{
                 "type": "error",
                 "message": e
@@ -149,7 +150,7 @@ class SoundCloudService(BaseService):
             return track_urls
 
         except Exception as e:
-            logging.error(f"Error extracting track URLs from playlist: {e}")
+            logger.error(f"Error extracting track URLs from playlist: {e}")
             return []
 
     def _get_cover_url(self, info_dict: dict):

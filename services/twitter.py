@@ -8,9 +8,11 @@ import aiofiles
 import aiohttp
 from fake_useragent import UserAgent
 
-from .base_service import BaseService
+from services.base_service import BaseService
 
 ua = UserAgent()
+
+logger = logging.getLogger(__name__)
 
 
 class TwitterService(BaseService):
@@ -94,7 +96,7 @@ class TwitterService(BaseService):
             result.append({"type": "title", "title": f"{author} - {title}"})
 
         except Exception as e:
-            logging.error(f"Error downloading Twitter video: {str(e)}")
+            logger.error(f"Error downloading Twitter video: {str(e)}")
             return [{
                 "type": "error",
                 "message": e

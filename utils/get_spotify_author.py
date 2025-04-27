@@ -4,6 +4,8 @@ import re
 import aiohttp
 from .spotify_login import get_access_token
 
+logger = logging.getLogger(__name__)
+
 
 async def get_track_info(track_id: str):
     """Получение данных о треке по его ID"""
@@ -25,7 +27,7 @@ def extract_track_id(url: str) -> str | None:
 async def get_spotify_author(url: str):
     track_id = extract_track_id(url)
     if not track_id:
-        logging.error("Invalid Spotify URL")
+        logger.error("Invalid Spotify URL")
         return None, None, None
 
     try:
@@ -37,5 +39,5 @@ async def get_spotify_author(url: str):
 
         return artist, title, cover_url
     except Exception as e:
-        logging.error(f"Error fetching track: {e}")
+        logger.error(f"Error fetching track: {e}")
         return None, None, None

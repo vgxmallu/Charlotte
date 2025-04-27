@@ -19,7 +19,9 @@ from utils import (
     update_metadata,
 )
 
-from .base_service import BaseService
+from services.base_service import BaseService
+
+logger = logging.getLogger(__name__)
 
 
 class AppleMusicService(BaseService):
@@ -114,7 +116,7 @@ class AppleMusicService(BaseService):
             return result
 
         except Exception as e:
-            logging.error(f"Error downloading YouTube Audio: {e}", exc_info=True)
+            logger.error(f"Error downloading YouTube Audio: {e}", exc_info=True)
             return [{
                 "type": "error",
                 "message": e
@@ -123,11 +125,11 @@ class AppleMusicService(BaseService):
     async def get_playlist_tracks(self, url: str) -> list[str]:
         match = re.search(r"playlist/([^/?]+)", url)
         if not match:
-            logging.error(f"Invalid playlist URL: {url}")
+            logger.error(f"Invalid playlist URL: {url}")
             return []
 
         playlist_id = match.group(1)
-        logging.info(f"Parsing playlist with ID: {playlist_id}")
+        logger.info(f"Parsing playlist with ID: {playlist_id}")
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -138,7 +140,7 @@ class AppleMusicService(BaseService):
 
                     script_tag = soup.find('script', {'id': 'serialized-server-data'})
                     if not script_tag:
-                        logging.error("Не удалось найти JSON в странице.")
+                        logger.error("Не удалось найти JSON в странице.")
                         return []
 
                     json_data = json.loads(script_tag.string)
@@ -157,15 +159,15 @@ class AppleMusicService(BaseService):
                                         track_id_extracted = match.group(1)
                                         track_urls.append("https://music.apple.com/pl/song/"+track_id_extracted)
                                 except (KeyError, IndexError):
-                                    logging.warning(f"Не удалось извлечь URL для трека: {track}")
+                                    logger.warning(f"Не удалось извлечь URL для трека: {track}")
 
                             break
 
                     return track_urls
 
         except aiohttp.ClientError as e:
-            logging.error(f"Ошибка при запросе страницы: {e}")
+            logger.error(f"Ошибка при запросе страницы: {e}")
         except json.JSONDecodeError:
-            logging.error("Ошибка при декодировании JSON.")
+            logger.error("Ошибка при декодировании JSON.")
 
         return []

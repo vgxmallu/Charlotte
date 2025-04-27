@@ -1,22 +1,20 @@
-from services import (
-    TikTokService,
-    YouTubeService,
-    YtMusicService,
-    SoundCloudService,
-    SpotifyService,
-    PinterestService,
-    AppleMusicService,
-    BiliBiliService,
-    TwitterService,
-    InstagramService,
-    PixivService,
-)
+import importlib.util
+import inspect
+import logging
+import os
+
+from services import base_service
+
+logger = logging.getLogger(__name__)
 
 SERVICES = {}
 
-
 def register_service(name, handler):
-    SERVICES[name] = handler
+    if name in SERVICES:
+        logger.warning(f"{name} is already registered.")
+    else:
+        SERVICES[name] = handler
+        logger.info(f"{name} registered")
 
 
 def get_service_handler(url):
@@ -26,14 +24,17 @@ def get_service_handler(url):
     raise ValueError("Сервис не поддерживается")
 
 
-register_service("youtube", YouTubeService())
-register_service("ytmusic", YtMusicService())
-register_service("soundcloud", SoundCloudService())
-register_service("tiktok", TikTokService())
-register_service("spotify", SpotifyService())
-register_service("pinterest", PinterestService())
-register_service("apple_music", AppleMusicService())
-register_service("bilibili", BiliBiliService())
-register_service("twitter", TwitterService())
-register_service("instagram", InstagramService())
-register_service("pixiv", PixivService())
+def initialize_services():
+    for filename in os.listdir('./services'):
+        if filename.endswith('.py') and filename != '__init__.py':
+            module_name = filename[:-3]
+            module_path = os.path.join('./services', filename)
+
+            spec = importlib.util.spec_from_file_location(module_name, module_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+
+            for name, obj in inspect.getmembers(module, inspect.isclass):
+                if issubclass(obj, base_service.BaseService) and obj is not base_service.BaseService:
+                    handler = obj()
+                    register_service(name, handler)

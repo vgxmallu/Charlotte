@@ -10,9 +10,11 @@ import aiohttp
 import yt_dlp
 from fake_useragent import UserAgent
 
-from .base_service import BaseService
+from services.base_service import BaseService
 
 ua = UserAgent()
+
+logger = logging.getLogger(__name__)
 
 
 class PinterestService(BaseService):
@@ -47,7 +49,7 @@ class PinterestService(BaseService):
             if match:
                 post_id = match.group(1)
             else:
-                logging.error(f"Не удалось извлечь post_id из URL: {url}")
+                logger.error(f"Failed to extract post_id from URL: {url}")
                 return result
 
             post_dict = await self._get_pin_info(int(post_id))
@@ -82,7 +84,7 @@ class PinterestService(BaseService):
                     await self._download_photo(image_url, filename)
                     result.append({"type": "image", "path": filename})
             else:
-                logging.error(f"No media: {post_dict}")
+                logger.error(f"No media: {post_dict}")
                 return result
 
             result.append({"type": "title", "title": post_dict["title"]})
@@ -90,7 +92,7 @@ class PinterestService(BaseService):
             return result
 
         except Exception as e:
-            logging.error(f"Failed to download Pinterest: {e}")
+            logger.error(f"Failed to download Pinterest: {e}")
             return [{
                 "type": "error",
                 "message": e
@@ -186,7 +188,7 @@ class PinterestService(BaseService):
             ext = "jpg"
 
         else:
-            logging.error(f"Unknown Pinterest type. Pin id{pin_id}")
+            logger.error(f"Unknown Pinterest type. Pin id{pin_id}")
 
         data = {
             "title": title,
@@ -222,7 +224,7 @@ class PinterestService(BaseService):
                                 f"Failed to retrieve image. Status code: {response.status}"
                             )
         except Exception as e:
-            logging.error(f"Failed to retrieve image: {url}. {e}")
+            logger.error(f"Failed to retrieve image: {url}. {e}")
 
     async def _download_video(self, url: str, filename: str) -> None:
         try:
@@ -230,14 +232,14 @@ class PinterestService(BaseService):
                 async with session.get(url) as response:
                     content_length = response.headers.get("Content-Length")
                     if content_length and int(content_length) > 50 * 1024 * 1024:
-                        logging.warning(f"Файл {filename} слишком большой (>50MB).")
+                        logger.warning(f"File {filename} is too large (>50MB).")
                         return
 
                     async with aiofiles.open(filename, "wb") as f:
                         async for chunk in response.content.iter_chunked(1024):
                             await f.write(chunk)
         except Exception as e:
-            logging.error(f"Ошибка загрузки видео: {e}")
+            logger.error(f"Error downloading video: {e}")
 
     def _get_best_video(self, video_list):
         video_qualities = ["V_EXP7", "V_720P", "V_480P", "V_360P", "V_HLSV3_MOBILE"]
@@ -256,4 +258,4 @@ class PinterestService(BaseService):
                         lambda: ydl.download([url])
                 )
         except Exception as e:
-            logging.error(f"Ошибка при скачивании видео из m3u8: {e}")
+            logger.error(f"Error downloading video from m3u8: {e}")

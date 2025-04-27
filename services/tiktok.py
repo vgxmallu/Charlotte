@@ -3,7 +3,9 @@ import re
 
 from ttsave_api import ContentType, TTSave
 
-from .base_service import BaseService
+from services.base_service import BaseService
+
+logger = logging.getLogger(__name__)
 
 
 class TikTokService(BaseService):
@@ -50,7 +52,7 @@ class TikTokService(BaseService):
             return result
 
         except Exception as e:
-            logging.error(f"Error downloading TikTok: {str(e)}")
+            logger.error(f"Error downloading TikTok: {str(e)}")
             return [{
                 "type": "error",
                 "message": e

@@ -1,10 +1,15 @@
 import logging
+from typing import Optional
+
+from mutagen.id3 import ID3
+from mutagen.id3._frames import APIC, TIT2, TPE1
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, APIC, TIT2, TPE1
+
+logger = logging.getLogger(__name__)
 
 
 def update_metadata(
-    audio_file: str, title: str, artist: str, cover_file: str = None
+    audio_file: str, title: str, artist: str, cover_file: Optional[str]
 ) -> None:
     """
     Updates the MP3 file metadata and adds a cover art.
@@ -17,7 +22,7 @@ def update_metadata(
     """
     # Checking file extension
     if not audio_file.lower().endswith(".mp3"):
-        logging.error(f"Файл {audio_file} не является MP3.")
+        logger.error(f"Файл {audio_file} не является MP3.")
         return
 
     try:
@@ -42,9 +47,9 @@ def update_metadata(
                 )
 
         audio.save()
-        logging.info(
+        logger.info(
             f"Metadata and file cover of {audio_file} have been successfully updated."
         )
 
     except Exception as e:
-        logging.error(f"Error when updating metadata: {str(e)}")
+        logger.error(f"Error when updating metadata: {str(e)}")

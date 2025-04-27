@@ -10,11 +10,11 @@ import yt_dlp
 from aiofiles import os as aios
 from yt_dlp.utils import sanitize_filename
 from ytmusicapi import YTMusic
-import json
 
+from services.base_service import BaseService
 from utils import random_cookie_file, update_metadata
 
-from .base_service import BaseService
+logger = logging.getLogger(__name__)
 
 
 _search_executor = ThreadPoolExecutor(max_workers=5)
@@ -113,7 +113,7 @@ class YtMusicService(BaseService):
             return result
 
         except Exception as e:
-            logging.error(f"Error downloading YouTube Audio: {str(e)}")
+            logger.error(f"Error downloading YouTube Audio: {str(e)}")
             return [{
                 "type": "error",
                 "message": str(e)
@@ -142,5 +142,5 @@ class YtMusicService(BaseService):
             else:
                 raise ValueError(f"Invalid playlist URL: {url}")
         except Exception as e:
-            logging.error(f"Error fetching playlist tracks: {e}")
+            logger.error(f"Error fetching playlist tracks: {e}")
         return tracks

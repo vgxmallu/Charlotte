@@ -25,6 +25,8 @@ from config.secrets import ADMIN_ID
 from database.database_manager import SQLiteDatabaseManager
 from loader import dp
 
+logger = logging.getLogger(__name__)
+
 
 class News_Spam(StatesGroup):
     news_spam = State()
@@ -93,16 +95,16 @@ async def process_spam_news_to_chats(message: Message, state: FSMContext) -> Non
                 )
                 success_send += 1
             except TelegramNotFound:
-                logging.error(f"Chat not found: {row[0]}")
+                logger.error(f"Chat not found: {row[0]}")
             except TelegramRetryAfter as e:
-                logging.warning(f"Retry after {e.retry_after} seconds")
+                logger.warning(f"Retry after {e.retry_after} seconds")
                 await asyncio.sleep(e.retry_after)
             except TelegramBadRequest as e:
-                logging.error(f"Telegram Bad Request: {e}")
+                logger.error(f"Telegram Bad Request: {e}")
             except TelegramAPIError as e:
-                logging.error(f"Telegram API error: {e}")
+                logger.error(f"Telegram API error: {e}")
             except Exception as e:
-                logging.error(f"Unexpected error: {e}")
+                logger.error(f"Unexpected error: {e}")
             finally:
                 error_send += 1
 

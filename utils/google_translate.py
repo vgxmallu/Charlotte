@@ -1,7 +1,10 @@
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from deep_translator import GoogleTranslator
 import logging
+from concurrent.futures import ThreadPoolExecutor
+
+from deep_translator import GoogleTranslator
+
+logger = logging.getLogger(__name__)
 
 
 executor = ThreadPoolExecutor()
@@ -36,5 +39,5 @@ async def translate_text(text: str, target_language: str = "uk") -> str:
         )
         return translated
     except Exception as e:
-        logging.error(f"Error during translation: {str(e)}")
+        logger.error(f"Error during translation: {str(e)}")
         return "Translation Error"

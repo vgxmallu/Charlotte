@@ -12,7 +12,9 @@ from yt_dlp.utils import sanitize_filename
 
 from utils import random_cookie_file, update_metadata
 
-from .base_service import BaseService
+from services.base_service import BaseService
+
+logger = logging.getLogger(__name__)
 
 
 class YouTubeService(BaseService):
@@ -98,7 +100,7 @@ class YouTubeService(BaseService):
                 }]
 
         except Exception as e:
-            logging.error(f"YouTube video error: {str(e)}", exc_info=True)
+            logger.error(f"YouTube video error: {str(e)}", exc_info=True)
             raise
 
     async def download_audio(self, url: str) -> list:
@@ -155,7 +157,7 @@ class YouTubeService(BaseService):
                 }]
 
         except Exception as e:
-            logging.error(f"YouTube audio error: {str(e)}", exc_info=True)
+            logger.error(f"YouTube audio error: {str(e)}", exc_info=True)
             return [{
                 "type": "error",
                 "message": e
