@@ -3,7 +3,7 @@ import logging
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 import yt_dlp
 from aiofiles import os as aios
@@ -65,13 +65,13 @@ class YouTubeService(BaseService):
 
     async def download_video(self, url: str) -> list:
         try:
-            is_valid, best_format = check_video_size(url)
+            is_valid, best_format = await self._check_video_size(url)
 
             if is_valid is False and best_format is None:
                 raise ValueError("Youtube Video size is too large")
 
             options = self._get_video_options()
-            options["format"] = f"{best_format["format_id"]}+bestaudio[ext=m4a]/best[ext=mp4]/best"
+            options["format"] = best_format
             with yt_dlp.YoutubeDL(options) as ydl:
                 loop = asyncio.get_event_loop()
 
@@ -105,7 +105,7 @@ class YouTubeService(BaseService):
         try:
             options = self._get_audio_options()
             with yt_dlp.YoutubeDL(options) as ydl:
-                loop = asyncio.get_event_loop()
+                loop = asyncio.get_running_loop()
 
                 info_dict = await loop.run_in_executor(
                     self._download_executor,
@@ -153,215 +153,71 @@ class YouTubeService(BaseService):
             }]
 
 
-def check_video_size(url, max_size_mb=50):
-    ydl_opts = {
-        'skip_download': True,
-        'force_ipv4': True,
-        'quiet': True,
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
+    async def _check_video_size(self, url: str, max_size_mb: int =50) -> Tuple[bool, Union[str, None]]:
+        """
+        Checks if there is an available option to download video and audio up to a given size (default 50 MB).
 
-    formats = info.get('formats', [])
-    suitable_formats = []
+        Args:
+            url (str): YouTube video URL.
+            max_size_mb (int): Maximum allowed size in megabytes.
 
-    for f in formats:
-        ext = f.get('ext')
-        vcodec = f.get('vcodec', '')
-        filesize = f.get('filesize') or f.get('filesize_approx')  # На всякий случай
+        Returns:
+            Tuple[bool, Optional[str]]:
+            - (True, format string like '137+140') if a suitable pair is found.
+            - (False, None) otherwise.
+        """
+        ydl_opts = {
+            'skip_download': True,
+            'force_ipv4': True,
+            'quiet': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            loop = asyncio.get_running_loop()
 
-        if not filesize or ext != 'mp4' or not vcodec.startswith('avc1'):
-            continue
-
-        size_mb = filesize / (1024 * 1024)
-        if size_mb <= max_size_mb:
-            suitable_formats.append(f)
-
-    if suitable_formats:
-        best_format = max(
-            suitable_formats,
-            key=lambda x: (
-                x.get('height', 0),
-                x.get('tbr', 0)
+            info_dict = await loop.run_in_executor(
+                self._download_executor,
+                lambda: ydl.extract_info(url, download=False)
             )
-        )
-        return True, best_format
-    else:
-        return False, None
 
-# import logging
-# import os
-# import asyncio
-# import re
+        formats = info_dict.get('formats', [])
+        video_formats = []
+        audio_formats = []
 
-# import yt_dlp
-# from yt_dlp.utils import sanitize_filename
+        for f in formats:
+            ext = f.get('ext')
+            vcodec = f.get('vcodec', '')
+            acodec = f.get('acodec', '')
+            filesize = f.get('filesize') or f.get('filesize_approx')
 
-# from utils import update_metadata, get_all_tracks_from_playlist_soundcloud, truncate_string
-# from aiogram.enums import InputMediaType
-# from aiogram.types import FSInputFile
-# from aiogram.utils.media_group import MediaGroupBuilder
+            if not filesize:
+                continue
 
+            if vcodec != 'none' and vcodec and ext == "mp4":
+                if vcodec.startswith('avc1'):
+                    video_formats.append(f)
+            if acodec != 'none' and vcodec == "none" and acodec.startswith('mp4a'):
+                audio_formats.append(f)
 
-# class YouTubeDownloader:
-#     def __init__(self, output_path: str = "other/downloadsTemp"):
-#         """
-#         Initialize the YouTubeDownloader with an output path for downloads.
+        best_pair = None
+        best_score = (-1, -1)
 
-#         Parameters:
-#         ----------
-#         output_path : str, optional
-#             The directory where downloaded files will be saved (default is "other/downloadsTemp").
-#         """
-#         self.output_path = output_path
-#         os.makedirs(self.output_path, exist_ok=True)
-#         self.yt_dlp_video_options = {
-#                 "format": "bv*[filesize < 50M][ext=mp4][vcodec^=avc1] + ba[ext=m4a]",
-#                 "outtmpl": f"{self.output_path}/%(title)s.%(ext)s",
-#                 'noplaylist': True,
-#             }
-#         self.yt_dlp_audio_options = {
-#                 "format": "m4a/bestaudio/best",
-#                 "writethumbnail": True,
-#                 "outtmpl": f"{self.output_path}/{sanitize_filename('%(title)s')}",
-#                 "postprocessors": [
-#                     {
-#                         "key": "FFmpegExtractAudio",
-#                         "preferredcodec": "mp3",
-#                     }
-#                 ],
-#             }
+        for v in video_formats:
+            for a in audio_formats:
+                v_size = v.get('filesize') or v.get('filesize_approx') or 0
+                a_size = a.get('filesize') or a.get('filesize_approx') or 0
 
-#     async def download(self, url: str, format: str):
-#         """
-#         Download a media file (video or audio) based on the format.
+                total_size_mb = (v_size + a_size) / (1024 * 1024)
 
-#         Parameters:
-#         ----------
-#         url : str
-#             The YouTube video URL to download.
-#         format : str
-#             The format of the download ('media' for video or 'audio' for audio).
+                if total_size_mb <= max_size_mb:
+                    score = (
+                        v.get('height', 0),
+                        a.get('abr', 0)
+                    )
+                    if score > best_score:
+                        best_score = score
+                        best_pair = f'{v["format_id"]}+{a["format_id"]}'
 
-#         Yields:
-#         -------
-#         AsyncGenerator
-#             Returns an async generator yielding video, audio and cover filenames or None if an error occurs.
-#         """
-#         try:
-#             if format == "media":
-#                 async for result in self._download_video(url):
-#                     yield result
-#             elif format == "audio":
-#                 if re.match(r"https://music\.youtube\.com/playlist\?list=([a-zA-Z0-9\-_]+)", url):
-#                     # Playlist
-#                     async for result in self._download_playlist(url):
-#                         yield result
-
-#                 #single track
-#                 async for result in self._download_single_track(url):
-#                     yield result
-#             else:
-#                 logging.error(f"Unsupported format: {format}")
-#                 yield None
-#         except Exception as e:
-#             logging.error(f"Unexpected error: {e}")
-#             yield None
-
-#     async def _download_video(self, url: str):
-#         """
-#         Download a video from YouTube.
-
-#         Parameters:
-#         ----------
-#         url : str
-#             The YouTube video URL to download.
-
-#         Yields:
-#         -------
-#         tuple
-#             Yields a tuple containing the MediaGroup object, video title, and list of filenames
-#         """
-#         try:
-#             with yt_dlp.YoutubeDL(self.yt_dlp_video_options) as ydl:
-#                 info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
-#                 title = info_dict.get("title", "video")
-#                 filename = ydl.prepare_filename(info_dict)
-
-#                 await asyncio.to_thread(ydl.download, [url])
-
-#                 media_group = MediaGroupBuilder(caption=truncate_string(title))
-#                 media_group.add_video(media=FSInputFile(filename), type=InputMediaType.VIDEO)
-
-#                 if os.path.exists(filename):
-#                     yield media_group, [filename]
-#         except Exception as e:
-#             logging.error(f"Error downloading YouTube video: {str(e)}")
-#             yield None, None
-
-#     async def _download_single_track(self, url: str):
-#         """
-#         Downloads a single SoundCloud track.
-
-#         Parameters:
-#         ----------
-#         url : str
-#             The URL of the SoundCloud track to download.
-
-#         Yields:
-#         -------
-#         tuple
-#             Yields the file paths of the downloaded audio and cover image, or None if an error occurs.
-#         """
-#         yield await self._download_track(url)
-
-#     # async def _download_playlist(self, url: str):
-#     #     """
-#     #     Downloads a SoundCloud playlist by iterating over each track in the playlist.
-
-#     #     Parameters:
-#     #     ----------
-#     #     url : str
-#     #         The URL of the SoundCloud playlist to download.
-
-#     #     Yields:
-#     #     -------
-#     #     tuple
-#     #         Yields the file paths of the downloaded audio and cover image for each track, or None if an error occurs.
-#     #     """
-#     #     tracks = get_all_tracks_from_playlist_soundcloud(url)
-#     #     for track in tracks:
-#     #         yield await self._download_track(track)
-
-#     async def _download_track(self, url: str):
-#         """
-#         Download audio from YouTube.
-
-#         Parameters:
-#         ----------
-#         url : str
-#             The YouTube video URL to download.
-
-#         Yields:
-#         -------
-#         tuple
-#             Yields a tuple containing the audio filename and thumbnail filename
-#         """
-#         try:
-#             with yt_dlp.YoutubeDL(self.yt_dlp_audio_options) as ydl:
-#                 info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
-#                 title = info_dict.get("title", "audio")
-#                 author = info_dict.get("uploader", "unknown")
-
-#                 audio_filename = os.path.join(self.output_path, f"{sanitize_filename(title)}.mp3")
-#                 thumbnail_filename = os.path.join(self.output_path, f"{sanitize_filename(title)}.webp")
-
-#                 await asyncio.to_thread(ydl.download, [url])
-
-#                 update_metadata(audio_filename, title=title, artist=author)
-
-#                 if os.path.exists(audio_filename):
-#                     return audio_filename, thumbnail_filename
-#         except Exception as e:
-#             logging.error(f"Error downloading YouTube Audio: {str(e)}")
-#             return None, None
+        if best_pair:
+            return True, best_pair
+        else:
+            return False, None
