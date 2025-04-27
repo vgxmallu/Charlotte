@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Version\n"
 "Report-Msgid-Bugs-To: lycomilopster@gmail.com\n"
-"POT-Creation-Date: 2025-03-24 20:36+0100\n"
+"POT-Creation-Date: 2025-04-27 17:55+0200\n"
 "PO-Revision-Date: 2025-03-09 15:44+0100\n"
 "Last-Translator: JellyTyan\n"
 "Language: en\n"
@@ -16,17 +16,17 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.13.1\n"
+"Generated-By: Babel 2.13.0\n"
 
-#: handlers/admin/news.py:40
+#: handlers/admin/news.py:42
 msgid "Send a message with the news"
 msgstr ""
 
-#: handlers/admin/news.py:72
+#: handlers/admin/news.py:74
 msgid "Mailing list started"
 msgstr ""
 
-#: handlers/admin/news.py:111
+#: handlers/admin/news.py:113
 msgid ""
 "The mailing has been completed\n"
 "Beginning at {start_time}\n"
@@ -102,7 +102,7 @@ msgstr "🌍 Pick a language!"
 msgid "Canceled!"
 msgstr "💔 Canceled! If that was a mistake, I’m here to help!"
 
-#: handlers/user/start.py:23
+#: handlers/user/start.py:25
 msgid ""
 "Henlooooooooooooooooooooooooooooooooooooooooooooooo\n"
 "\n"
@@ -148,35 +148,35 @@ msgstr ""
 "\n"
 "👉 Support Charlotte: https://buymeacoffee\\.com/jellytyan"
 
-#: handlers/user/url.py:34
+#: handlers/user/url.py:39
 msgid "Video"
 msgstr "🎥Video"
 
-#: handlers/user/url.py:35
+#: handlers/user/url.py:40
 msgid "Audio"
 msgstr "🎶Audio"
 
-#: handlers/user/url.py:38
+#: handlers/user/url.py:43
 msgid "Choose a format to download:"
 msgstr "✨ Choose a format to download:"
 
-#: handlers/user/url.py:63
+#: handlers/user/url.py:68
 msgid "The selection format is only available for YouTube."
 msgstr "🌸 The selection format is only available for YouTube. 😊"
 
-#: handlers/user/url.py:119
+#: handlers/user/url.py:127
 msgid "Download completed."
 msgstr "🎉 Download completed! If you need anything else, feel free to ask! 💖"
 
-#: utils/error_handler.py:11
+#: utils/error_handler.py:15
 msgid "Download canceled."
 msgstr "💔 The download has been canceled. If that was a mistake, I’m here to help!"
 
-#: utils/error_handler.py:13
+#: utils/error_handler.py:17
 msgid "Critical error #022 - media file is too large"
 msgstr "⚠️ Critical error #022 – The media file is too large. "
 
-#: utils/error_handler.py:16
+#: utils/error_handler.py:20
 msgid ""
 "Sorry, the download returned empty content. Please check the link and try"
 " again."
@@ -184,7 +184,15 @@ msgstr ""
 "😔 Sorry, the download returned empty content. Please check the link and "
 "try again."
 
-#: utils/error_handler.py:22
+#: utils/error_handler.py:24
+msgid "Wow, you tried to download too heavy video. Don't do this, pleeease 😭"
+msgstr ""
+
+#: utils/error_handler.py:29
+msgid "Wow, you tried to download too heavy audio. Don't do this, pleeease 😭"
+msgstr ""
+
+#: utils/error_handler.py:34
 msgid "Sorry, there was an error. Try again later 🧡"
 msgstr "😔 Sorry, there was an error. Please try again later 🧡"
 
