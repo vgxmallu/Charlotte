@@ -1,16 +1,17 @@
 import asyncio
+from asyncio import Semaphore
+from collections import defaultdict
 from typing import Optional
 
+import aiogram
 from aiogram import types
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.i18n import gettext as _
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from filters.url_filter import UrlFilter
 from loader import dp
-from utils import get_service_handler, handle_download_error
-from managers.download_manager import TaskManager, MediaHandler, user_tasks
-from collections import defaultdict
-from asyncio import Semaphore
+from managers.download_manager import MediaHandler, TaskManager, user_tasks
+from utils import get_service_handler, handle_download_error, random_emoji
 
 user_semaphores = defaultdict(lambda: Semaphore(1))
 
@@ -23,6 +24,8 @@ async def url_handler(message: types.Message) -> None:
     """Handle incoming URL messages and manage downloads."""
     if not message.from_user:
         return
+
+    await message.react(reaction=[types.ReactionTypeEmoji(type=aiogram.enums.ReactionTypeType.EMOJI, emoji=random_emoji())])
 
     user_id = message.from_user.id
 
