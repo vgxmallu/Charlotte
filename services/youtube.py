@@ -5,8 +5,9 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Tuple, Union
 
+import aiofiles
+import aiohttp
 import yt_dlp
-from aiofiles import os as aios
 from yt_dlp.utils import sanitize_filename
 
 from utils import random_cookie_file, update_metadata
@@ -32,8 +33,7 @@ class YouTubeService(BaseService):
 
     def _get_audio_options(self):
         return {
-            "format": "m4a/bestaudio/best",
-            "writethumbnail": True,
+            "format": "ba[filesize<50M][acodec^=mp4a]/ba[filesize<50M][acodec=opus]/best[filesize<50M]",
             "outtmpl": f"{self.output_path}/%(id)s_{sanitize_filename('%(title)s')}",
             "cookiefile": random_cookie_file(),
             "postprocessors": [
@@ -126,8 +126,14 @@ class YouTubeService(BaseService):
                 audio_path = f"{base_path}.mp3"
                 thumbnail_path = f"{base_path}.jpg"
 
-                if not await aios.path.exists(thumbnail_path):
-                    thumbnail_path = f"{base_path}.webp"
+                thumbnail_url = info_dict.get("thumbnail", None)
+                if thumbnail_url:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(thumbnail_url) as response:
+                            response.raise_for_status()
+                            async with aiofiles.open(thumbnail_path, 'wb') as f:
+                                async for chunk in response.content.iter_chunked(1024):
+                                    await f.write(chunk)
 
                 await loop.run_in_executor(
                     self._download_executor,
@@ -142,7 +148,10 @@ class YouTubeService(BaseService):
                 return [{
                     "type": "audio",
                     "path": audio_path,
-                    "cover": thumbnail_path
+                    "cover": thumbnail_path,
+                    "title": info_dict.get("title", None),
+                    "performer": info_dict.get("uploader", None),
+                    "duration": info_dict.get("duration", None)
                 }]
 
         except Exception as e:

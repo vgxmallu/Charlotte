@@ -85,12 +85,13 @@ class SpotifyService(BaseService):
                 if cover_url is None:
                     cover_url = info_dict.get("thumbnail", None)
 
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(cover_url) as response:
-                        response.raise_for_status()
-                        async with aiofiles.open(cover_path, 'wb') as f:
-                            async for chunk in response.content.iter_chunked(1024):
-                                await f.write(chunk)
+                if cover_url:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(cover_url) as response:
+                            response.raise_for_status()
+                            async with aiofiles.open(cover_path, 'wb') as f:
+                                async for chunk in response.content.iter_chunked(1024):
+                                    await f.write(chunk)
 
                 assert cover_path, "Cover URL is not available"
 

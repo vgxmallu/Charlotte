@@ -135,6 +135,9 @@ class MediaHandler:
                     audio=types.FSInputFile(audio["path"]),
                     disable_notification=True,
                     thumbnail=types.FSInputFile(cover_path),
+                    title=audio.get("title", None),
+                    duration=audio.get("duration", None),
+                    performer=audio.get("performer", None),
                 )
 
                 await delete_files([audio["path"], absolute_cover_path])
