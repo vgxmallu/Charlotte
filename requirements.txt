@@ -1,7 +1,7 @@
 aiogram==3.18.0
 aiogram[i18n]
 yt_dlp
-ytmusicapi==1.10.2
+ytmusicapi==1.10.3
 python-dotenv~=1.1.0
 deep-translator~=1.11.4
 aiosqlite~=0.21.0
