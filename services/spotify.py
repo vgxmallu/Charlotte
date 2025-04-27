@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import re
+import json
 from concurrent.futures import ThreadPoolExecutor
 
 import aiofiles
@@ -137,11 +138,9 @@ class SpotifyService(BaseService):
                 headers = {"Authorization": f"Bearer {token}"}
                 params = {"offset": offset}
                 playlist_id = match.group(1)
-                playlist_url = (f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks")
+                playlist_url = (f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?additional_types=track")
 
-                async with session.get(
-                    playlist_url, headers=headers, params=params
-                ) as response:
+                async with session.get(playlist_url, headers=headers, params=params) as response:
                     if response.status == 200:
                         data = await response.json()
 
