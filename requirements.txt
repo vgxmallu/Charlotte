@@ -1,4 +1,4 @@
-aiogram==3.18.0
+aiogram==3.20.0
 aiogram[i18n]
 yt_dlp
 ytmusicapi==1.10.2
