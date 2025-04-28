@@ -29,7 +29,7 @@ class BiliBiliService(BaseService):
     async def download(self, url: str) -> list:
         try:
             async with DownloaderBilibili() as d:
-                video_path =  await d.get_video(url, path=Path("other/downloadsTemp"))
+                video_path =  await d.get_video(url, path=Path("other/downloadsTemp"),time_range=(0, 180))
 
                 return [{
                     "type": "video",
