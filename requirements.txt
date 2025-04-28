@@ -14,3 +14,4 @@ fake-useragent==2.2.0
 Pillow==11.2.1
 Babel==2.13.0
 PyTTSave==1.1.0
+git+https://github.com/JellyTyan/bilix#egg=bilix
