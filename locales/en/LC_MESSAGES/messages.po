@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Version\n"
 "Report-Msgid-Bugs-To: lycomilopster@gmail.com\n"
-"POT-Creation-Date: 2025-04-27 17:55+0200\n"
+"POT-Creation-Date: 2025-04-30 21:23+0200\n"
 "PO-Revision-Date: 2025-03-09 15:44+0100\n"
 "Last-Translator: JellyTyan\n"
 "Language: en\n"
@@ -193,6 +193,12 @@ msgid "Wow, you tried to download too heavy audio. Don't do this, pleeease 😭"
 msgstr ""
 
 #: utils/error_handler.py:34
+msgid ""
+"I'm sorry. You may have provided a corrupted link, private content or 18+"
+" content 🤯"
+msgstr ""
+
+#: utils/error_handler.py:39
 msgid "Sorry, there was an error. Try again later 🧡"
 msgstr "😔 Sorry, there was an error. Please try again later 🧡"
 

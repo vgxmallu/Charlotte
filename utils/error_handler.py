@@ -29,6 +29,11 @@ async def handle_download_error(message: types.Message, error: Exception, url: s
             _("Wow, you tried to download too heavy audio. Don't do this, pleeease 😭")
         )
         return
+    elif isinstance(error, ValueError) and str(error) == "Failed to download TikTok content":
+        await message.answer(
+            _("I'm sorry. You may have provided a corrupted link, private content or 18+ content 🤯")
+        )
+        return
     else:
         logger.error(f"Download error: {error}")
         await message.answer(_("Sorry, there was an error. Try again later 🧡"))
