@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  Version\n"
 "Report-Msgid-Bugs-To: lycomilopster@gmail.com\n"
-"POT-Creation-Date: 2025-04-30 21:23+0200\n"
+"POT-Creation-Date: 2025-05-02 18:53+0200\n"
 "PO-Revision-Date: 2025-03-09 15:44+0100\n"
 "Last-Translator: JellyTyan\n"
 "Language: en\n"
@@ -148,57 +148,53 @@ msgstr ""
 "\n"
 "👉 Support Charlotte: https://buymeacoffee\\.com/jellytyan"
 
-#: handlers/user/url.py:39
+#: handlers/user/url.py:40
 msgid "Video"
 msgstr "🎥Video"
 
-#: handlers/user/url.py:40
+#: handlers/user/url.py:41
 msgid "Audio"
 msgstr "🎶Audio"
 
-#: handlers/user/url.py:43
+#: handlers/user/url.py:44
 msgid "Choose a format to download:"
 msgstr "✨ Choose a format to download:"
 
-#: handlers/user/url.py:68
+#: handlers/user/url.py:69
 msgid "The selection format is only available for YouTube."
 msgstr "🌸 The selection format is only available for YouTube. 😊"
 
-#: handlers/user/url.py:127
+#: handlers/user/url.py:140
 msgid "Download completed."
 msgstr "🎉 Download completed! If you need anything else, feel free to ask! 💖"
 
-#: utils/error_handler.py:15
-msgid "Download canceled."
-msgstr "💔 The download has been canceled. If that was a mistake, I’m here to help!"
-
-#: utils/error_handler.py:17
-msgid "Critical error #022 - media file is too large"
-msgstr "⚠️ Critical error #022 – The media file is too large. "
-
-#: utils/error_handler.py:20
-msgid ""
-"Sorry, the download returned empty content. Please check the link and try"
-" again."
-msgstr ""
-"😔 Sorry, the download returned empty content. Please check the link and "
-"try again."
-
-#: utils/error_handler.py:24
-msgid "Wow, you tried to download too heavy video. Don't do this, pleeease 😭"
-msgstr ""
-
-#: utils/error_handler.py:29
-msgid "Wow, you tried to download too heavy audio. Don't do this, pleeease 😭"
-msgstr ""
-
-#: utils/error_handler.py:34
+#: utils/error_handler.py:35
 msgid ""
 "I'm sorry. You may have provided a corrupted link, private content or 18+"
 " content 🤯"
 msgstr ""
 
+#: utils/error_handler.py:37
+msgid "Critical error #022 - media file is too large"
+msgstr "⚠️ Critical error #022 – The media file is too large. "
+
 #: utils/error_handler.py:39
+msgid "Wow, you tried to download too heavy media. Don't do this, pleeease 😭"
+msgstr ""
+
+#: utils/error_handler.py:41
+msgid "Sorry, I couldn't download the media."
+msgstr ""
+
+#: utils/error_handler.py:43
+msgid "Download canceled."
+msgstr "💔 The download has been canceled. If that was a mistake, I’m here to help!"
+
+#: utils/error_handler.py:45
+msgid "Get playlist items error"
+msgstr ""
+
+#: utils/error_handler.py:47
 msgid "Sorry, there was an error. Try again later 🧡"
 msgstr "😔 Sorry, there was an error. Please try again later 🧡"
 
@@ -434,4 +430,19 @@ msgstr "😔 Sorry, there was an error. Please try again later 🧡"
 #~ "🙅‍♀️ It looks like you have an "
 #~ "active download already! If you want "
 #~ "to cancel it, use /cancel."
+
+#~ msgid ""
+#~ "Sorry, the download returned empty "
+#~ "content. Please check the link and "
+#~ "try again."
+#~ msgstr ""
+#~ "😔 Sorry, the download returned empty "
+#~ "content. Please check the link and "
+#~ "try again."
+
+#~ msgid "Wow, you tried to download too heavy video. Don't do this, pleeease 😭"
+#~ msgstr ""
+
+#~ msgid "Wow, you tried to download too heavy audio. Don't do this, pleeease 😭"
+#~ msgstr ""
 
