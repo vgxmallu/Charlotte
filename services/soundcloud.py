@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -12,8 +11,7 @@ from yt_dlp.utils import sanitize_filename
 
 from services.base_service import BaseService
 from utils import random_cookie_file, update_metadata
-
-logger = logging.getLogger(__name__)
+from utils.error_handler import BotError, ErrorCode
 
 
 class SoundCloudService(BaseService):
@@ -60,7 +58,13 @@ class SoundCloudService(BaseService):
                     lambda: ydl.extract_info(url, download=False)
                 )
                 if not info_dict:
-                    raise ValueError("Failed to get audio info")
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message="SoundCloud: Failed to fetch track info",
+                        url=url,
+                        critical=False,
+                        is_logged=True
+                    )
 
                 title = info_dict.get("title")
                 if title is None:
@@ -111,47 +115,62 @@ class SoundCloudService(BaseService):
                     )
             return result
 
+        except BotError as e:
+            raise e
         except Exception as e:
-            logger.error(f"Error downloading YouTube Audio: {str(e)}")
-            return [{
-                "type": "error",
-                "message": e
-            }]
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"SoundCloud: {e}",
+                url=url,
+                critical=True,
+                is_logged=True
+            )
 
     async def get_playlist_tracks(self, url: str) -> list[str]:
-        """
-        Extracts all track URLs from a SoundCloud playlist.
+        # SoundCloud playlist URLs must contain '/sets/'
+        if not self.is_playlist(url):
+            raise BotError(
+                code=ErrorCode.INVALID_URL,
+                message=f"Invalid SoundCloud playlist URL: {url}",
+                url=url,
+                critical=False,
+                is_logged=False
+            )
 
-        Args:
-            url (str): The URL of the SoundCloud playlist.
-
-        Returns:
-            list[str]: A list of track URLs. Returns None if there is an error.
-        """
         try:
             options = {"noplaylist": False, "extract_flat": True}
-
             with yt_dlp.YoutubeDL(options) as ydl:
                 loop = asyncio.get_event_loop()
-
-                playlist_info = await loop.run_in_executor(
+                info = await loop.run_in_executor(
                     self._download_executor,
                     lambda: ydl.extract_info(url, download=False)
                 )
-                if not playlist_info:
-                    raise ValueError("Failed to get audio info")
+                if not info or "entries" not in info:
+                    raise BotError(
+                        code=ErrorCode.PLAYLIST_INFO_ERROR,
+                        message="Failed to fetch playlist info",
+                        url=url,
+                        critical=True,
+                        is_logged=False
+                    )
 
-            track_urls = [
-                entry.get("url")
-                for entry in playlist_info.get("entries", [])
-                if entry.get("url")
-            ]
+                tracks = [
+                    entry["url"]
+                    for entry in info["entries"]
+                    if entry.get("url")
+                ]
+                return tracks
 
-            return track_urls
-
+        except BotError:
+            raise
         except Exception as e:
-            logger.error(f"Error extracting track URLs from playlist: {e}")
-            return []
+            raise BotError(
+                code=ErrorCode.PLAYLIST_INFO_ERROR,
+                message=f"Error extracting SoundCloud playlist tracks: {e}",
+                url=url,
+                critical=True,
+                is_logged=False
+            )
 
     def _get_cover_url(self, info_dict: dict):
         """

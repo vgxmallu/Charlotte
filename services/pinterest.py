@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -11,10 +10,9 @@ import yt_dlp
 from fake_useragent import UserAgent
 
 from services.base_service import BaseService
+from utils.error_handler import BotError, ErrorCode
 
 ua = UserAgent()
-
-logger = logging.getLogger(__name__)
 
 
 class PinterestService(BaseService):
@@ -49,8 +47,13 @@ class PinterestService(BaseService):
             if match:
                 post_id = match.group(1)
             else:
-                logger.error(f"Failed to extract post_id from URL: {url}")
-                return result
+                raise BotError(
+                    code=ErrorCode.INVALID_URL,
+                    message="Failed to extract post_id from URL",
+                    url=url,
+                    critical=False,
+                    is_logged=False,
+                )
 
             post_dict = await self._get_pin_info(int(post_id))
             image_signature = post_dict["image_signature"]
@@ -84,19 +87,27 @@ class PinterestService(BaseService):
                     await self._download_photo(image_url, filename)
                     result.append({"type": "image", "path": filename})
             else:
-                logger.error(f"No media: {post_dict}")
-                return result
+                raise BotError(
+                    code=ErrorCode.DOWNLOAD_FAILED,
+                    message=f"Unsupported file type: {post_dict['ext']}",
+                    url=url,
+                    critical=False,
+                    is_logged=True,
+                )
 
             result.append({"type": "title", "title": post_dict["title"]})
 
             return result
-
+        except BotError as e:
+            raise e
         except Exception as e:
-            logger.error(f"Failed to download Pinterest: {e}")
-            return [{
-                "type": "error",
-                "message": e
-            }]
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Pinterest: {e}",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )
 
     async def _get_pin_info(self, pin_id: int) -> Dict[str, Any]:
         url = "https://www.pinterest.com/resource/PinResource/get/"
@@ -188,7 +199,13 @@ class PinterestService(BaseService):
             ext = "jpg"
 
         else:
-            logger.error(f"Unknown Pinterest type. Pin id{pin_id}")
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Unknown Pinterest type. Pin id{pin_id}",
+                url=url,
+                critical=False,
+                is_logged=True,
+            )
 
         data = {
             "title": title,
@@ -220,11 +237,21 @@ class PinterestService(BaseService):
                                 await f.write(await response.read())
                             return
                         else:
-                            raise Exception(
-                                f"Failed to retrieve image. Status code: {response.status}"
+                            raise BotError(
+                                code=ErrorCode.DOWNLOAD_FAILED,
+                                message=f"Failed to retrieve image. Status code: {response.status}",
+                                url=url,
+                                critical=True,
+                                is_logged=True,
                             )
         except Exception as e:
-            logger.error(f"Failed to retrieve image: {url}. {e}")
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Failed to retrieve image: {url}. {e}",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )
 
     async def _download_video(self, url: str, filename: str) -> None:
         try:
@@ -232,14 +259,27 @@ class PinterestService(BaseService):
                 async with session.get(url) as response:
                     content_length = response.headers.get("Content-Length")
                     if content_length and int(content_length) > 50 * 1024 * 1024:
-                        logger.warning(f"File {filename} is too large (>50MB).")
-                        return
+                        raise BotError(
+                            code=ErrorCode.SIZE_CHECK_FAIL,
+                            message=f"File size exceeds 50MB: {url}",
+                            url=url,
+                            critical=False,
+                            is_logged=False,
+                        )
 
                     async with aiofiles.open(filename, "wb") as f:
                         async for chunk in response.content.iter_chunked(1024):
                             await f.write(chunk)
+        except BotError as e:
+            raise e
         except Exception as e:
-            logger.error(f"Error downloading video: {e}")
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Failed to retrieve video: {e}",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )
 
     def _get_best_video(self, video_list):
         video_qualities = ["V_EXP7", "V_720P", "V_480P", "V_360P", "V_HLSV3_MOBILE"]
@@ -258,4 +298,10 @@ class PinterestService(BaseService):
                         lambda: ydl.download([url])
                 )
         except Exception as e:
-            logger.error(f"Error downloading video from m3u8: {e}")
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Failed to download M3U8 video: {e}",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )

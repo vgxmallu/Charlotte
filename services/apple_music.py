@@ -12,14 +12,14 @@ from aiofiles import os as aios
 from bs4 import BeautifulSoup
 from yt_dlp.utils import sanitize_filename
 
+from services.base_service import BaseService
 from utils import (
     get_applemusic_author,
     random_cookie_file,
     search_music,
     update_metadata,
 )
-
-from services.base_service import BaseService
+from utils.error_handler import BotError, ErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,13 @@ class AppleMusicService(BaseService):
                     lambda: ydl.extract_info(video_link, download=False)
                 )
                 if not info_dict:
-                    raise ValueError("Failed to get audio info")
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message="Failed to extract info from Apple Music",
+                        url=url,
+                        critical=False,
+                        is_logged=True,
+                    )
 
                 await loop.run_in_executor(
                     self._download_executor,
@@ -114,19 +120,27 @@ class AppleMusicService(BaseService):
                         {"type": "audio", "path": audio_path, "cover": cover_path}
                     )
             return result
-
+        except BotError as e:
+            raise e
         except Exception as e:
-            logger.error(f"Error downloading YouTube Audio: {e}", exc_info=True)
-            return [{
-                "type": "error",
-                "message": e
-            }]
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Apple Music: {e}",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )
 
     async def get_playlist_tracks(self, url: str) -> list[str]:
         match = re.search(r"playlist/([^/?]+)", url)
         if not match:
-            logger.error(f"Invalid playlist URL: {url}")
-            return []
+            raise BotError(
+                code=ErrorCode.INVALID_URL,
+                message="Failed to extract playlist ID from URL",
+                url=url,
+                critical=False,
+                is_logged=False,
+            )
 
         playlist_id = match.group(1)
         logger.info(f"Parsing playlist with ID: {playlist_id}")
@@ -166,8 +180,20 @@ class AppleMusicService(BaseService):
                     return track_urls
 
         except aiohttp.ClientError as e:
-            logger.error(f"Ошибка при запросе страницы: {e}")
+            raise BotError(
+                code=ErrorCode.INTERNAL_ERROR,
+                message=f"Failed to fetch playlist: {e}",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )
         except json.JSONDecodeError:
-            logger.error("Ошибка при декодировании JSON.")
+            raise BotError(
+                code=ErrorCode.INTERNAL_ERROR,
+                message="Failed to parse playlist data",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )
 
         return []

@@ -1,8 +1,6 @@
 import asyncio
-import logging
 import os
 import re
-import json
 from concurrent.futures import ThreadPoolExecutor
 
 import aiofiles
@@ -19,8 +17,7 @@ from utils import (
     search_music,
     update_metadata,
 )
-
-logger = logging.getLogger(__name__)
+from utils.error_handler import BotError, ErrorCode
 
 
 class SpotifyService(BaseService):
@@ -56,8 +53,13 @@ class SpotifyService(BaseService):
 
         artist, title, cover_url = await get_spotify_author(url)
         if not artist or not title:
-            logger.error("Failed to get artist and title from Spotify")
-            return result
+            raise BotError(
+                code=ErrorCode.INTERNAL_ERROR,
+                message="Failed to get artist and title from Spotify",
+                url=url,
+                critical=True,
+                is_logged=True
+            )
 
         video_link = await search_music(artist, title)
         options = self._get_audio_options()
@@ -70,7 +72,12 @@ class SpotifyService(BaseService):
                     lambda: ydl.extract_info(video_link, download=False)
                 )
                 if not info_dict:
-                    raise ValueError("Failed to get audio info")
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message="Failed to get audio info",
+                        url=url,
+                        is_logged=True
+                    )
 
                 await loop.run_in_executor(
                     self._download_executor,
@@ -113,12 +120,16 @@ class SpotifyService(BaseService):
                     )
             return result
 
+        except BotError as e:
+            raise e
         except Exception as e:
-            logger.error(f"Error downloading YouTube Audio: {str(e)}")
-            return [{
-                "type": "error",
-                "message": e
-            }]
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Error downloading YouTube Audio: {e}",
+                url=url,
+                critical=True,
+                is_logged=True
+            )
 
     async def get_playlist_tracks(self, url: str) -> list[str]:
         tracks = []
@@ -126,8 +137,13 @@ class SpotifyService(BaseService):
 
         match = re.search(r"playlist/([^/?]+)", url)
         if not match:
-            logger.error(f"Invalid playlist URL: {url}")
-            return []
+            raise BotError(
+                code=ErrorCode.INVALID_URL,
+                message="Invalid playlist URL",
+                url=url,
+                critical=False,
+                is_logged=False
+            )
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -148,5 +164,11 @@ class SpotifyService(BaseService):
                             tracks.append(track["track"]["external_urls"]["spotify"])
 
         except Exception as e:
-            logger.error(f"Error fetching playlist tracks: {e}")
+            raise BotError(
+                code=ErrorCode.PLAYLIST_INFO_ERROR,
+                message=f"Error fetching playlist tracks: {e}",
+                url=url,
+                critical=True,
+                is_logged=True
+            )
         return tracks

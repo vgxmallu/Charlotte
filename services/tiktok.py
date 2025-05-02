@@ -4,6 +4,7 @@ import re
 from ttsave_api import ContentType, TTSave
 
 from services.base_service import BaseService
+from utils.error_handler import BotError, ErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,12 @@ class TikTokService(BaseService):
             )
 
             if saved_files is None:
-                raise ValueError("Failed to download TikTok content")
+                raise BotError(
+                    code=ErrorCode.DOWNLOAD_FAILED,
+                    message="Failed to download TikTok. PyTTSave returned empty",
+                    critical=False,
+                    is_logged=True
+                )
 
             for file in saved_files["files"]:
                 if file.endswith(".mp4"):
@@ -50,10 +56,12 @@ class TikTokService(BaseService):
             result.append({"type": "title", "title": title})
 
             return result
-
+        except BotError as e:
+            raise e
         except Exception as e:
-            logger.error(f"Error downloading TikTok: {str(e)}")
-            return [{
-                "type": "error",
-                "message": e
-            }]
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"TikTok: {str(e)}",
+                critical=False,
+                is_logged=True
+            )

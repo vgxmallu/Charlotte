@@ -1,7 +1,7 @@
-import asyncio
 import logging
+from typing import Optional
 
-from aiogram import exceptions, types
+from aiogram import types
 from aiogram.utils.i18n import gettext as _
 
 from config.secrets import ADMIN_ID
@@ -9,35 +9,48 @@ from config.secrets import ADMIN_ID
 logger = logging.getLogger(__name__)
 
 
-async def handle_download_error(message: types.Message, error: Exception, url: str | None) -> None:
+class BotError(Exception):
+    def __init__(self, code: str, message: Optional[str] = None, url: Optional[str] = None, critical: bool = False, is_logged: bool = False):
+        self.code = code  # For example: "E001"
+        self.url = url or "None" # Media URL
+        self.message = message  # Message for Owner
+        self.critical = critical  # Send to owner?
+        self.is_logged = is_logged # Need to be logged?
+        super().__init__(message)
+
+class ErrorCode:
+    INVALID_URL = "E001"
+    LARGE_FILE = "E002"
+    SIZE_CHECK_FAIL = "E003"
+    DOWNLOAD_FAILED = "E004"
+    DOWNLOAD_CANCELLED = "E005"
+    PLAYLIST_INFO_ERROR = "E006"
+    INTERNAL_ERROR = "E500"
+
+
+async def handle_download_error(message: types.Message, error: BotError) -> None:
     """Handle various download errors and send appropriate messages."""
-    if isinstance(error, asyncio.CancelledError):
-        await message.answer(_("Download canceled."))
-    elif isinstance(error, exceptions.TelegramEntityTooLarge):
-        await message.answer(_("Critical error #022 - media file is too large"))
-    elif isinstance(error, ValueError) and str(error) == "Downloaded content is empty.":
-        await message.answer(
-            _("Sorry, the download returned empty content. Please check the link and try again.")
-        )
-    elif isinstance(error, ValueError) and str(error) == "Youtube Video size is too large":
-        await message.answer(
-            _("Wow, you tried to download too heavy video. Don't do this, pleeease 😭")
-        )
-        return
-    elif isinstance(error, ValueError) and str(error) == "Youtube Audio size is too large":
-        await message.answer(
-            _("Wow, you tried to download too heavy audio. Don't do this, pleeease 😭")
-        )
-        return
-    elif isinstance(error, ValueError) and str(error) == "Failed to download TikTok content":
-        await message.answer(
-            _("I'm sorry. You may have provided a corrupted link, private content or 18+ content 🤯")
-        )
-        return
-    else:
-        logger.error(f"Download error: {error}")
-        await message.answer(_("Sorry, there was an error. Try again later 🧡"))
-    bot = message.bot
-    if bot is None:
-        return
-    await bot.send_message(ADMIN_ID, f"Sorry, there was an error:\n {url}\n\n{error}")
+    match error.code:
+        case ErrorCode.INVALID_URL:
+            await message.answer(_("I'm sorry. You may have provided a corrupted link, private content or 18+ content 🤯"))
+        case ErrorCode.LARGE_FILE:
+            await message.answer(_("Critical error #022 - media file is too large"))
+        case ErrorCode.SIZE_CHECK_FAIL:
+            await message.answer(_("Wow, you tried to download too heavy media. Don't do this, pleeease 😭"))
+        case ErrorCode.DOWNLOAD_FAILED:
+            await message.answer(_("Sorry, I couldn't download the media."))
+        case ErrorCode.DOWNLOAD_CANCELLED:
+            await message.answer(_("Download canceled."))
+        case ErrorCode.PLAYLIST_INFO_ERROR:
+            await message.answer(_("Get playlist items error"))
+        case ErrorCode.INTERNAL_ERROR:
+            await message.answer(_("Sorry, there was an error. Try again later 🧡"))
+
+    if error.critical:
+        bot = message.bot
+        if bot is None:
+            return
+        await bot.send_message(ADMIN_ID, f"Sorry, there was an error:\n {error.url}\n\n```{error.message}```")
+
+    if error.is_logged:
+        logger.error(f"Error downloading media: {error.message}")

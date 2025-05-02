@@ -7,6 +7,7 @@ from pathlib import Path
 from bilix.sites.bilibili import DownloaderBilibili
 
 from services.base_service import BaseService
+from utils.error_handler import BotError, ErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,10 @@ class BiliBiliService(BaseService):
                 }]
 
         except Exception as e:
-            logger.error(f"Error downloading Bilibili video: {str(e)}")
-            return [{
-                "type": "error",
-                "message": str(e)
-            }]
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Bilibili: {e}",
+                url=url,
+                critical=False,
+                is_logged=True,
+            )

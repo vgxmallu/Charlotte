@@ -7,9 +7,9 @@ from functools import partial
 import aiofiles
 import aiohttp
 
-from utils import login_user, truncate_string
-
 from services.base_service import BaseService
+from utils import login_user, truncate_string
+from utils.error_handler import BotError, ErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,6 @@ class InstagramService(BaseService):
         logger.info(f"Output path set to: {self.output_path}")
 
     def is_supported(self, url: str) -> bool:
-        logger.debug(f"Checking if URL is supported: {url}")
         return bool(
             re.match(
                 r"https://www\.instagram\.com/(?:p|reel|tv|stories)/([A-Za-z0-9_-]+)/",
@@ -34,11 +33,9 @@ class InstagramService(BaseService):
         )
 
     def is_playlist(self, url: str) -> bool:
-        logger.debug(f"Checking if URL is a playlist: {url}")
         return False
 
     async def download(self, url: str) -> list:
-        logger.info(f"Starting download for URL: {url}")
         result = []
 
         try:
@@ -72,7 +69,6 @@ class InstagramService(BaseService):
                 media_urls.append(media_url)
                 filenames.append(filename)
 
-            logger.info(f"Starting download of {len(media_urls)} media files")
             downloaded = await download_all_media(media_urls, filenames)
 
             for path in downloaded:
@@ -82,17 +78,17 @@ class InstagramService(BaseService):
                         "path": path,
                         "title": truncate_string(getattr(media, "caption_text", ""))
                     })
-                else:
-                    logger.error(f"Failed to download media: {path}")
 
             return result
 
         except Exception as e:
-            logger.error(f"Error downloading Instagram media: {str(e)}", exc_info=True)
-            return [{
-                "type": "error",
-                "message": str(e)
-            }]
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Instagram: {e}",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )
 
 
 async def run_in_thread(func, *args):
@@ -101,29 +97,33 @@ async def run_in_thread(func, *args):
 
 
 async def download_media(session, url, filename):
-    logger.debug(f"Downloading media from URL: {url} to {filename}")
     try:
         async with session.get(url) as response:
             if response.status == 200:
                 async with aiofiles.open(filename, "wb") as f:
                     await f.write(await response.read())
-                logger.debug(f"Downloaded: {filename}")
                 return filename
             else:
-                error_msg = f"Failed to download {url}: HTTP {response.status}"
-                logger.error(error_msg)
-                return Exception(error_msg)
+                raise BotError(
+                    code=ErrorCode.INTERNAL_ERROR,
+                    message=f"Failed to download Instagram media: {response.status}",
+                    url=url,
+                    critical=False,
+                    is_logged=True,
+                )
     except Exception as e:
-        error_msg = f"Error downloading {url}: {str(e)}"
-        logger.error(error_msg, exc_info=True)
-        return Exception(error_msg)
+        raise BotError(
+            code=ErrorCode.DOWNLOAD_FAILED,
+            message=f"Instagram download: {e}",
+            url=url,
+            critical=True,
+            is_logged=True,
+        )
 
 
 async def download_all_media(media_urls, filenames):
-    logger.info(f"Starting parallel download for {len(media_urls)} files")
     async with aiohttp.ClientSession() as session:
         tasks = [download_media(session, url, name)
             for url, name in zip(media_urls, filenames)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        logger.info("Parallel download completed")
         return results

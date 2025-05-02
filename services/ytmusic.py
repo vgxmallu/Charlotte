@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -13,8 +12,7 @@ from ytmusicapi import YTMusic
 
 from services.base_service import BaseService
 from utils import random_cookie_file, update_metadata
-
-logger = logging.getLogger(__name__)
+from utils.error_handler import BotError, ErrorCode
 
 
 _search_executor = ThreadPoolExecutor(max_workers=5)
@@ -76,7 +74,11 @@ class YtMusicService(BaseService):
                     lambda: ydl.extract_info(url, download=True)
                 )
                 if not info_dict:
-                    raise ValueError("Failed to get audio info")
+                    raise BotError(
+                        ErrorCode.DOWNLOAD_FAILED,
+                        "Failed to get audio info",
+                        url=url
+                    )
 
                 base_path = os.path.join(
                     self.output_path,
@@ -112,12 +114,16 @@ class YtMusicService(BaseService):
                     )
             return result
 
+        except BotError as e:
+            raise e
+
         except Exception as e:
-            logger.error(f"Error downloading YouTube Audio: {str(e)}")
-            return [{
-                "type": "error",
-                "message": str(e)
-            }]
+            raise BotError(
+                ErrorCode.DOWNLOAD_FAILED,
+                message=f"YouTube Music: {str(e)}",
+                url=url,
+                is_logged=True
+            )
 
 
     async def get_playlist_tracks(self, url: str) -> list[str]:
@@ -140,7 +146,16 @@ class YtMusicService(BaseService):
                         continue
                     tracks.append(f"https://music.youtube.com/watch?v={videoid}")
             else:
-                raise ValueError(f"Invalid playlist URL: {url}")
+                raise BotError(ErrorCode.INVALID_URL)
+
+        except BotError as e:
+            raise e
         except Exception as e:
-            logger.error(f"Error fetching playlist tracks: {e}")
+            raise BotError(
+                ErrorCode.PLAYLIST_INFO_ERROR,
+                f"Failed to fetch playlist info: {e}",
+                url=url,
+                critical=True,
+                is_logged=True
+            )
         return tracks

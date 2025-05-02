@@ -12,6 +12,7 @@ from filters.url_filter import UrlFilter
 from loader import dp
 from managers.download_manager import MediaHandler, TaskManager, user_tasks
 from utils import get_service_handler, handle_download_error, random_emoji
+from utils.error_handler import BotError, ErrorCode
 
 user_semaphores = defaultdict(lambda: Semaphore(1))
 
@@ -96,12 +97,22 @@ async def handle_single_download(
             content = await service.download(url)
 
         if not content:
-            raise ValueError("Downloaded content is empty.")
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                url=url,
+                critical=True
+            )
 
         await MediaHandler.send_media_content(message, content)
 
     except Exception as e:
-        await handle_download_error(message, e, url)
+        if isinstance(e, Exception):
+            e = BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                url=url,
+                critical=True
+            )
+        await handle_download_error(message, e)
 
     finally:
         TaskManager().remove_task(int(user_id))
@@ -113,6 +124,8 @@ async def handle_playlist_download(service, url: str, message: types.Message) ->
 
     try:
         tracks = await service.get_playlist_tracks(url)
+        if isinstance(tracks, BotError):
+            raise tracks
         for track in tracks:
             if message.from_user.id not in user_tasks:
                 break
@@ -126,6 +139,12 @@ async def handle_playlist_download(service, url: str, message: types.Message) ->
 
         await message.reply(_("Download completed."))
     except Exception as e:
-        await handle_download_error(message, e, url)
+        if isinstance(e, Exception):
+            e = BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                url=url,
+                critical=True
+            )
+        await handle_download_error(message, e)
     finally:
         TaskManager().remove_task(message.from_user.id)

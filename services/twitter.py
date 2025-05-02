@@ -1,14 +1,15 @@
+import asyncio
 import logging
 import os
 import re
 from typing import Any, Dict
-import asyncio
 
 import aiofiles
 import aiohttp
 from fake_useragent import UserAgent
 
 from services.base_service import BaseService
+from utils.error_handler import BotError, ErrorCode
 
 ua = UserAgent()
 
@@ -36,7 +37,7 @@ class TwitterService(BaseService):
         try:
             match = re.search(r"status/(\d+)", url)
             if match is None:
-                raise ValueError("No tweet id found")
+                raise BotError(ErrorCode.INVALID_URL)
             tweet_id = int(match.group(1))
 
             tweet_dict = await self._get_tweet_info(tweet_id)
@@ -94,13 +95,17 @@ class TwitterService(BaseService):
             title = tweet_dict["data"]["tweetResult"]["result"]["legacy"]["full_text"]
 
             result.append({"type": "title", "title": f"{author} - {title}"})
-
+        except BotError as e:
+            raise e
         except Exception as e:
             logger.error(f"Error downloading Twitter video: {str(e)}")
-            return [{
-                "type": "error",
-                "message": e
-            }]
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=str(e),
+                url=url,
+                critical=True,
+                is_logged=True
+            )
 
         return result
 
@@ -115,8 +120,11 @@ class TwitterService(BaseService):
                     data = await response.json()
                     return data.get("guest_token")
                 else:
-                    raise Exception(
-                        f"Failed to get guest token: response status {response.status}"
+                    raise BotError(
+                        code=ErrorCode.INTERNAL_ERROR,
+                        message=f"Failed to get guest token. Status code: {response.status}",
+                        critical=True,
+                        is_logged=True
                     )
 
     async def _get_tweet_info(self, tweet_id: int) -> Dict[str, Any]:
@@ -144,8 +152,11 @@ class TwitterService(BaseService):
                 if response.status == 200:
                     return await response.json()
                 else:
-                    raise Exception(
-                        f"Failed to get guest token: response status {response.status}"
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message=f"Failed to get tweet info: response status {response.status}",
+                        url=str(tweet_id),
+                        critical=True,
                     )
 
     async def _download_file(self, url: str, filename: str, max_size: int = 0):
@@ -153,7 +164,11 @@ class TwitterService(BaseService):
             async with session.get(url) as response:
                 if max_size and "Content-Length" in response.headers:
                     if int(response.headers["Content-Length"]) > max_size:
-                        raise ValueError("File too large")
+                        return BotError(
+                            code=ErrorCode.SIZE_CHECK_FAIL,
+                            url=url,
+                            critical=False,
+                        )
 
                 async with aiofiles.open(filename, "wb") as f:
                     async for chunk in response.content.iter_chunked(1024*8):

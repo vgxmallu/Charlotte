@@ -11,6 +11,7 @@ import yt_dlp
 from yt_dlp.utils import sanitize_filename
 
 from utils import random_cookie_file, update_metadata
+from utils.error_handler import BotError, ErrorCode
 
 from services.base_service import BaseService
 
@@ -70,7 +71,11 @@ class YouTubeService(BaseService):
             is_valid, best_format = await self._check_video_size(url)
 
             if is_valid is False and best_format is None:
-                raise ValueError("Youtube Video size is too large")
+                raise BotError(
+                    ErrorCode.SIZE_CHECK_FAIL,
+                    "Video size is too large",
+                    url=url
+                )
 
             options = self._get_video_options()
             options["format"] = best_format
@@ -83,7 +88,11 @@ class YouTubeService(BaseService):
                 )
 
                 if not info_dict:
-                    raise ValueError("Failed to get video info")
+                    raise BotError(
+                        ErrorCode.DOWNLOAD_FAILED,
+                        "Failed to get video info",
+                        url=url
+                    )
 
                 await loop.run_in_executor(
                     self._download_executor,
@@ -99,15 +108,27 @@ class YouTubeService(BaseService):
                     "duration": info_dict.get("duration", 0),
                 }]
 
+        except BotError as e:
+            raise e
+
         except Exception as e:
-            logger.error(f"YouTube video error: {str(e)}", exc_info=True)
-            raise
+            raise BotError(
+                ErrorCode.DOWNLOAD_FAILED,
+                f"Youtube: {str(e)}",
+                url=url,
+                critical=True,
+                is_logged=True
+            )
 
     async def download_audio(self, url: str) -> list:
         try:
             is_valid, best_format = await self._check_audio_size(url)
             if is_valid is False and best_format is None:
-                raise ValueError("Youtube Audio size is too large")
+                raise BotError(
+                    ErrorCode.SIZE_CHECK_FAIL,
+                    "Audio size is too large",
+                    url=url
+                )
 
             options = self._get_audio_options()
             options["format"] = best_format
@@ -119,7 +140,11 @@ class YouTubeService(BaseService):
                     lambda: ydl.extract_info(url, download=False)
                 )
                 if not info_dict:
-                    raise ValueError("Failed to get audio info")
+                    raise BotError(
+                        ErrorCode.DOWNLOAD_FAILED,
+                        "Failed to get audio info",
+                        url=url
+                    )
 
                 await loop.run_in_executor(
                     self._download_executor,
@@ -160,48 +185,16 @@ class YouTubeService(BaseService):
                     "performer": info_dict.get("uploader", None),
                     "duration": info_dict.get("duration", None)
                 }]
-
+        except BotError as e:
+            raise e
         except Exception as e:
-            logger.error(f"YouTube audio error: {str(e)}", exc_info=True)
-            return [{
-                "type": "error",
-                "message": e
-            }]
-
-
-    async def _check_audio_size(self, url: str, max_size_mb: int =50) -> Tuple[bool, Union[str, None]]:
-        """
-        Checks if there is an available option to download audio up to a given size (default 50 MB).
-
-        Args:
-            url (str): YouTube video URL.
-            max_size_mb (int): Maximum allowed size in megabytes.
-
-        Returns:
-            Tuple[bool, Optional[str]]:
-            - (True, format string like '251') if a suitable format is found.
-            - (False, None) otherwise.
-        """
-        ydl_opts = {
-            'skip_download': True,
-            'force_ipv4': True,
-            'quiet': True,
-            "format": "ba[filesize<50M][acodec^=mp4a]/ba[filesize<50M][acodec=opus]/best[filesize<50M]"
-        }
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                loop = asyncio.get_running_loop()
-
-                info_dict = await loop.run_in_executor(
-                    self._download_executor,
-                    lambda: ydl.extract_info(url, download=False)
-                )
-
-            best_format =  info_dict.get('format_id', None)
-
-            return (True, best_format)
-        except Exception:
-            return (False, None)
+            raise BotError(
+                ErrorCode.DOWNLOAD_FAILED,
+                f"YouTube audio: {str(e)}",
+                url=url,
+                critical=True,
+                is_logged=True
+            )
 
 
     async def _check_video_size(self, url: str, max_size_mb: int =50) -> Tuple[bool, Union[str, None]]:
@@ -229,6 +222,9 @@ class YouTubeService(BaseService):
                 self._download_executor,
                 lambda: ydl.extract_info(url, download=False)
             )
+
+        if not info_dict:
+            return False, None
 
         formats = info_dict.get('formats', [])
         video_formats = []
@@ -272,3 +268,41 @@ class YouTubeService(BaseService):
             return True, best_pair
         else:
             return False, None
+
+
+    async def _check_audio_size(self, url: str, max_size_mb: int =50) -> Tuple[bool, Union[str, None]]:
+        """
+        Checks if there is an available option to download audio up to a given size (default 50 MB).
+
+        Args:
+            url (str): YouTube video URL.
+            max_size_mb (int): Maximum allowed size in megabytes.
+
+        Returns:
+            Tuple[bool, Optional[str]]:
+            - (True, format string like '251') if a suitable format is found.
+            - (False, None) otherwise.
+        """
+        ydl_opts = {
+            'skip_download': True,
+            'force_ipv4': True,
+            'quiet': True,
+            "format": "ba[filesize<50M][acodec^=mp4a]/ba[filesize<50M][acodec=opus]/best[filesize<50M]"
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                loop = asyncio.get_running_loop()
+
+                info_dict = await loop.run_in_executor(
+                    self._download_executor,
+                    lambda: ydl.extract_info(url, download=False)
+                )
+
+            if not info_dict:
+                return False, None
+
+            best_format =  info_dict.get('format_id', None)
+
+            return (True, best_format)
+        except Exception:
+            return (False, None)
