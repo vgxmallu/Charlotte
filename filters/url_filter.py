@@ -42,7 +42,7 @@ class UrlFilter(BaseFilter):
                     ),
                     # re.match(r'https?://(?:www\.)?tiktok\.com/.*', message.text),
                     re.match(
-                        r"https?://soundcloud\.com/([\w-]+)/([\w-]+)", message.text
+                        r"^https:\/\/(?:on\.soundcloud\.com\/[a-zA-Z0-9]+|soundcloud\.com\/[^\/]+\/(sets\/[^\/]+|[^\/\?\s]+))(?:\?.*)?$", message.text
                     ),
                     re.match(
                         r"https?://open\.spotify\.com/(track|playlist)/([\w-]+)",

@@ -38,7 +38,7 @@ class SoundCloudService(BaseService):
         }
 
     def is_supported(self, url: str) -> bool:
-        return bool(re.match(r"https?://soundcloud\.com/([\w-]+)/([\w-]+)", url))
+        return bool(re.match(r"^https:\/\/(?:on\.soundcloud\.com\/[a-zA-Z0-9]+|soundcloud\.com\/[^\/]+\/(sets\/[^\/]+|[^\/\?\s]+))(?:\?.*)?$", url))
 
     def is_playlist(self, url: str) -> bool:
         return bool(

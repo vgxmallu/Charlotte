@@ -14,7 +14,7 @@ class BotError(Exception):
 ```
 Parametrs:
 
-| Параметр |	Тип | 	Описание |
+| Parametr |	Type | 	Description |
 | -------- | -------- | -------- |
  | code |	str |	A unique error code (e.g., “E001”). |
 | message |	str |	Detailed message to the owner (logging, PM). |
@@ -30,7 +30,7 @@ Attributes:
 - critical: criticality flag.
 - is_logged: logged flag.
 
-## Класс ErrorCode
+## Class ErrorCode
 
 A set of predefined error codes used in BotError.
 ```python
@@ -44,10 +44,10 @@ class ErrorCode:
     INTERNAL_ERROR = "E500"
 ```
 
-Список кодов:
+List of codes:
 
 
-|Код |	Название | 	Описание |
+|Code |	Name | 	Description |
 | -------- | -------- | -------- |
 |E001 |	INVALID_URL |	Occurs when user provides invalid url. Invalid links are those that pass the initial filter but either lack the media ID needed for downloading, or refer to content that no longer exists or has been made private.|
 |E002 |	LARGE_FILE |	Occurs when downloaded media file is too large and it can't be uploaded into Telegram. |
