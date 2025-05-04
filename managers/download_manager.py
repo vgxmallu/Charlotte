@@ -1,15 +1,14 @@
 import asyncio
-from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 from aiogram import types
 from aiogram.enums import InputMediaType
 from aiogram.utils.media_group import MediaGroupBuilder
 
 from utils import delete_files, handle_download_error, truncate_string
+from models.media_models import MediaContent, MediaType
+from utils.error_handler import BotError, ErrorCode
 
-MediaContent = Dict[str, str]
-MediaList = List[MediaContent]
 user_tasks: Dict[int, asyncio.Task] = {}
 
 
@@ -40,66 +39,71 @@ class TaskManager:
 
 class MediaHandler:
     @staticmethod
-    async def send_media_content(message: types.Message, content: MediaList) -> None:
+    async def send_media_content(message: types.Message, content: List[MediaContent]) -> None:
         """Handle sending different types of media content."""
-        temp_medias = []
-        audio = None
-        gifs = []
-        media_items = []
-        caption = None
-
         try:
-            for item in content:
-                if item["type"] == "error":
-                    raise ValueError(item["message"])
-                if item["type"] == "title":
-                    caption = truncate_string(item["title"])
-                    continue
+            media_items, audio_items, gif_items, caption = MediaHandler.parse_media(content=content)
 
-                media_path = Path(item["path"])
-                absolute_path = media_path.resolve()
-                temp_medias.append(absolute_path)
+            await MediaHandler.send_media_groups(message, media_items, caption)
 
-                if item["type"] == "image":
-                    media_items.append({"type": "photo", "path": absolute_path})
-                elif item["type"] == "video":
-                    media_items.append({"type": "video", "path": absolute_path, "width": item.get("width", None), "height": item.get("height", None), "duration": item.get("duration", None)})
-                elif item["type"] == "audio":
-                    audio = item
-                    continue
-                elif item["type"] == "gif":
-                    gifs.append(media_path)
-                    continue
-        except Exception as e:
-            await delete_files(temp_medias)
-            await handle_download_error(message, e, None)
-        try:
             bot = message.bot
             if bot is None:
                 return
 
-            # Split media items into groups of 10
-            for i in range(0, len(media_items), 10):
+            if audio_items:
+                for audio in audio_items:
+                    await bot.send_chat_action(message.chat.id, "upload_voice")
+                    await MediaHandler.send_audio(message, audio)
+
+            for gif in gif_items:
+                await bot.send_chat_action(message.chat.id, "upload_video")
+                await message.answer_animation(
+                    animation=types.FSInputFile(gif.path), disable_notification=True
+                )
+
+                await delete_files(gif.path)
+        except Exception as e:
+            if not isinstance(e, BotError):
+                e = BotError(
+                    code=ErrorCode.DOWNLOAD_FAILED,
+                    message=f"Media Handler: {str(e)}",
+                    critical=True,
+                    is_logged=True
+                )
+            await handle_download_error(message, e)
+
+    @staticmethod
+    async def send_media_groups(message: types.Message, content: List[MediaContent], caption: Optional[str]):
+        """Send media groups with or without caption."""
+        temp_media_path = []
+        bot = message.bot
+        if bot is None:
+            return
+
+        try:
+        # Split media items into groups of 10
+            for i in range(0, len(content), 10):
                 media_group = MediaGroupBuilder()
                 if caption and i == 0:
                     media_group.caption = caption
 
-                group_items = media_items[i : i + 10]
+                group_items = content[i : i + 10]
                 for item in group_items:
-                    if item["type"] == "photo":
+                    if item.type == MediaType.PHOTO:
                         media_group.add_photo(
-                            media=types.FSInputFile(item["path"]),
+                            media=types.FSInputFile(item.path),
                             type=InputMediaType.PHOTO,
                         )
-                    elif item["type"] == "video":
+                    elif item.type == MediaType.VIDEO:
                         media_group.add_video(
-                            media=types.FSInputFile(item["path"]),
+                            media=types.FSInputFile(item.path),
                             type=InputMediaType.VIDEO,
                             supports_streaming=True,
-                            width=item["width"],
-                            height=item["height"],
-                            duration=item["duration"]
+                            width=int(item.width) if item.width else None,
+                            height=int(item.height) if item.height else None,
+                            duration=int(item.duration) if item.duration else None
                         )
+                    temp_media_path.append(item.path)
 
                 if group_items:
                     await bot.send_chat_action(message.chat.id, "upload_video")
@@ -108,43 +112,62 @@ class MediaHandler:
                     )
                     await asyncio.sleep(1)
 
-            if audio:
-                await bot.send_chat_action(message.chat.id, "upload_voice")
-                await MediaHandler.send_audio(message, audio)
-
-            for gif in gifs:
-                await bot.send_chat_action(message.chat.id, "upload_video")
-                await message.answer_animation(
-                    animation=types.FSInputFile(gif), disable_notification=True
-                )
         except Exception as e:
-            await handle_download_error(message, e, None)
+            if not isinstance(e, BotError):
+                e = BotError(
+                    code=ErrorCode.DOWNLOAD_FAILED,
+                    message=f"Media Handler: {str(e)}",
+                    critical=True,
+                    is_logged=True
+                )
+            await handle_download_error(message, e)
         finally:
-            await delete_files(temp_medias)
+            await delete_files(temp_media_path)
+
 
     @staticmethod
-    async def send_audio(message: types.Message, audio: Dict) -> None:
+    async def send_audio(message: types.Message, audio: MediaContent) -> None:
         """Send audio file with or without cover."""
-        cover_path = audio.get("cover", None)
         try:
-            if cover_path:
-                cover_path = Path(cover_path)
-                absolute_cover_path = cover_path.resolve()
+            await message.answer_audio(
+                audio=types.FSInputFile(audio.path),
+                disable_notification=True,
+                thumbnail=types.FSInputFile(audio.cover) if audio.cover else None,
+                title=audio.title,
+                duration=int(audio.duration) if audio.duration else None,
+                performer=audio.performer,
+            )
 
-                await message.answer_audio(
-                    audio=types.FSInputFile(audio["path"]),
-                    disable_notification=True,
-                    thumbnail=types.FSInputFile(cover_path),
-                    title=audio.get("title", None),
-                    duration=audio.get("duration", None),
-                    performer=audio.get("performer", None),
-                )
-
-                await delete_files([audio["path"], absolute_cover_path])
-            else:
-                await message.answer_audio(
-                    audio=types.FSInputFile(audio["path"]), disable_notification=True
-                )
-                await delete_files([audio["path"]])
+            await delete_files([audio.path, audio.cover])
         except Exception as e:
-            await handle_download_error(message, e, None)
+            if not isinstance(e, BotError):
+                e = BotError(
+                    code=ErrorCode.DOWNLOAD_FAILED,
+                    message=f"Media Handler: {str(e)}",
+                    critical=True,
+                    is_logged=True
+                )
+            await handle_download_error(message, e)
+
+
+    @staticmethod
+    def parse_media(content: List[MediaContent]) -> Tuple[List[MediaContent], List[MediaContent], List[MediaContent], Optional[str]]:
+        """Parse media content to separate media, audio, gif items and extract caption."""
+
+        audio_items = []
+        gif_items = []
+        media_items = []
+        caption = None
+
+        for item in content:
+            if item.title:
+                caption = truncate_string(item.title or "")
+
+            if item.type in (MediaType.PHOTO, MediaType.VIDEO):
+                media_items.append(item)
+            elif item.type == MediaType.AUDIO:
+                audio_items.append(item)
+            elif item.type == MediaType.GIF:
+                gif_items.append(item)
+
+        return media_items, audio_items, gif_items, caption

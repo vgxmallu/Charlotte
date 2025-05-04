@@ -2,6 +2,8 @@ import asyncio
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import List
 
 import aiofiles
 import aiohttp
@@ -9,6 +11,7 @@ import yt_dlp
 from aiofiles import os as aios
 from yt_dlp.utils import sanitize_filename
 
+from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
 from utils import (
     get_access_token,
@@ -48,20 +51,18 @@ class SpotifyService(BaseService):
     def is_playlist(self, url: str) -> bool:
         return bool(re.match(r"https?://open\.spotify\.com/playlist/([\w-]+)", url))
 
-    async def download(self, url: str) -> list:
-        result = []
-
-        artist, title, cover_url = await get_spotify_author(url)
-        if not artist or not title:
+    async def download(self, url: str) -> List[MediaContent]:
+        permofer, title, cover_url = await get_spotify_author(url)
+        if not permofer or not title:
             raise BotError(
                 code=ErrorCode.INTERNAL_ERROR,
-                message="Failed to get artist and title from Spotify",
+                message="Failed to get permofer and title from Spotify",
                 url=url,
                 critical=True,
                 is_logged=True
             )
 
-        video_link = await search_music(artist, title)
+        video_link = await search_music(permofer, title)
         options = self._get_audio_options()
         try:
             with yt_dlp.YoutubeDL(options) as ydl:
@@ -95,12 +96,20 @@ class SpotifyService(BaseService):
                     cover_url = info_dict.get("thumbnail", None)
 
                 if cover_url:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(cover_url) as response:
-                            response.raise_for_status()
-                            async with aiofiles.open(cover_path, 'wb') as f:
-                                async for chunk in response.content.iter_chunked(1024):
-                                    await f.write(chunk)
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(cover_url) as response:
+                                response.raise_for_status()
+                                cover_path = f"{base_path}.jpg"
+                                async with aiofiles.open(cover_path, 'wb') as f:
+                                    async for chunk in response.content.iter_chunked(1024):
+                                        await f.write(chunk)
+
+                        if not await aios.path.exists(cover_path):
+                            cover_path = None
+
+                    except Exception:
+                        cover_path = None
 
                 assert cover_path, "Cover URL is not available"
 
@@ -109,16 +118,27 @@ class SpotifyService(BaseService):
                     lambda: update_metadata(
                         audio_path,
                         title=title,
-                        artist=artist,
+                        artist=permofer,
                         cover_file=cover_path
                     )
                 )
 
-                if await aios.path.exists(audio_path) or await aios.path.exists(cover_path):
-                    result.append(
-                        {"type": "audio", "path": audio_path, "cover": cover_path}
+                if await aios.path.exists(audio_path):
+                    return [MediaContent(
+                        type=MediaType.AUDIO,
+                        path=Path(audio_path),
+                        duration=info_dict.get("duration", None),
+                        title=title,
+                        performer=permofer,
+                        cover=Path(cover_path) if cover_path else None
+                    )]
+                else:
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message="Audio file not found after download",
+                        url=url,
+                        is_logged=True
                     )
-            return result
 
         except BotError as e:
             raise e

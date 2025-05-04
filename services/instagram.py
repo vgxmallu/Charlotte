@@ -3,10 +3,13 @@ import logging
 import os
 import re
 from functools import partial
+from pathlib import Path
+from typing import List
 
 import aiofiles
 import aiohttp
 
+from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
 from utils import login_user, truncate_string
 from utils.error_handler import BotError, ErrorCode
@@ -35,7 +38,7 @@ class InstagramService(BaseService):
     def is_playlist(self, url: str) -> bool:
         return False
 
-    async def download(self, url: str) -> list:
+    async def download(self, url: str) -> List[MediaContent]:
         result = []
 
         try:
@@ -72,12 +75,14 @@ class InstagramService(BaseService):
             downloaded = await download_all_media(media_urls, filenames)
 
             for path in downloaded:
-                if not isinstance(path, Exception):
-                    result.append({
-                        "type": "video" if path.endswith(".mp4") else "image",
-                        "path": path,
-                        "title": truncate_string(getattr(media, "caption_text", ""))
-                    })
+                if isinstance(path, str):
+                    result.append(
+                        MediaContent(
+                            type=MediaType.PHOTO if path.endswith(".jpg") else MediaType.VIDEO,
+                            path=Path(path),
+                            title=truncate_string(getattr(media, "caption_text", ""))
+                        )
+                    )
 
             return result
 
@@ -96,7 +101,7 @@ async def run_in_thread(func, *args):
     return await loop.run_in_executor(None, partial(func, *args))
 
 
-async def download_media(session, url, filename):
+async def download_media(session, url, filename) -> str:
     try:
         async with session.get(url) as response:
             if response.status == 200:

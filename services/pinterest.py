@@ -2,13 +2,15 @@ import asyncio
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, List
 
 import aiofiles
 import aiohttp
 import yt_dlp
 from fake_useragent import UserAgent
 
+from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
 from utils.error_handler import BotError, ErrorCode
 
@@ -35,7 +37,7 @@ class PinterestService(BaseService):
     def is_playlist(self, url: str) -> bool:
         return False
 
-    async def download(self, url: str) -> list:
+    async def download(self, url: str) -> List[MediaContent]:
         result = []
 
         async with aiohttp.ClientSession() as sesion:
@@ -67,7 +69,11 @@ class PinterestService(BaseService):
                     filename = os.path.join(self.output_path, f"{image_signature}.mp4")
                     await self._download_video(video_url, filename)
 
-                result.append({"type": "video", "path": filename})
+                result.append(MediaContent(
+                    type=MediaType.VIDEO,
+                    path=Path(filename),
+                    title=post_dict["title"],
+                ))
             elif post_dict["ext"] == "carousel":
                 carousel_data = post_dict["carousel_data"]
                 for i, image_url in enumerate(carousel_data):
@@ -75,17 +81,28 @@ class PinterestService(BaseService):
                         self.output_path, f"{image_signature}_{i}.jpg"
                     )
                     await self._download_photo(image_url, filename)
-                    result.append({"type": "image", "path": filename})
+                    result.append(MediaContent(
+                        type=MediaType.PHOTO,
+                        path=Path(filename),
+                        title=post_dict["title"],
+                    ))
             elif post_dict["ext"] == "jpg":
                 image_url = post_dict["image"]
                 if image_url.endswith(".gif"):
                     filename = os.path.join(self.output_path, f"{image_signature}.gif")
                     await self._download_video(image_url, filename)
-                    result.append({"type": "gif", "path": filename})
+                    result.append(MediaContent(
+                        type=MediaType.GIF,
+                        path=Path(filename),
+                    ))
                 else:
                     filename = os.path.join(self.output_path, f"{image_signature}.jpg")
                     await self._download_photo(image_url, filename)
-                    result.append({"type": "image", "path": filename})
+                    result.append(MediaContent(
+                        type=MediaType.PHOTO,
+                        path=Path(filename),
+                        title=post_dict["title"],
+                    ))
             else:
                 raise BotError(
                     code=ErrorCode.DOWNLOAD_FAILED,
@@ -94,8 +111,6 @@ class PinterestService(BaseService):
                     critical=False,
                     is_logged=True,
                 )
-
-            result.append({"type": "title", "title": post_dict["title"]})
 
             return result
         except BotError as e:

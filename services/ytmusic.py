@@ -2,6 +2,7 @@ import asyncio
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
+from typing import List
 
 import aiofiles
 import aiohttp
@@ -10,10 +11,11 @@ from aiofiles import os as aios
 from yt_dlp.utils import sanitize_filename
 from ytmusicapi import YTMusic
 
+from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
 from utils import random_cookie_file, update_metadata
 from utils.error_handler import BotError, ErrorCode
-
+from pathlib import Path
 
 _search_executor = ThreadPoolExecutor(max_workers=5)
 
@@ -60,9 +62,7 @@ class YtMusicService(BaseService):
     def supports_format_choice(self) -> bool:
         return False
 
-    async def download(self, url: str) -> list:
-        result = []
-
+    async def download(self, url: str) -> List[MediaContent]:
         options = self._get_audio_options()
         try:
             with yt_dlp.YoutubeDL(options) as ydl:
@@ -75,9 +75,9 @@ class YtMusicService(BaseService):
                 )
                 if not info_dict:
                     raise BotError(
-                        ErrorCode.DOWNLOAD_FAILED,
-                        "Failed to get audio info",
-                        url=url
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message="Failed to get audio info",
+                        url=url,
                     )
 
                 base_path = os.path.join(
@@ -108,11 +108,24 @@ class YtMusicService(BaseService):
                     )
                 )
 
-                if await aios.path.exists(audio_path) and await aios.path.exists(cover_path):
-                    result.append(
-                        {"type": "audio", "path": audio_path, "cover": cover_path}
+                if await aios.path.exists(audio_path):
+                    return [
+                        MediaContent(
+                            type=MediaType.AUDIO,
+                            path=Path(audio_path),
+                            duration=info_dict.get("duration", 0),
+                            title=info_dict.get("title", "audio"),
+                            cover=Path(cover_path)
+                        )
+                    ]
+                else:
+                    raise BotError(
+                        ErrorCode.DOWNLOAD_FAILED,
+                        message="Failed to download audio",
+                        url=url,
+                        is_logged=True,
+                        critical=True
                     )
-            return result
 
         except BotError as e:
             raise e
@@ -122,7 +135,8 @@ class YtMusicService(BaseService):
                 ErrorCode.DOWNLOAD_FAILED,
                 message=f"YouTube Music: {str(e)}",
                 url=url,
-                is_logged=True
+                is_logged=True,
+                critical=True
             )
 
 
@@ -152,8 +166,8 @@ class YtMusicService(BaseService):
             raise e
         except Exception as e:
             raise BotError(
-                ErrorCode.PLAYLIST_INFO_ERROR,
-                f"Failed to fetch playlist info: {e}",
+                code=ErrorCode.PLAYLIST_INFO_ERROR,
+                message=f"Failed to fetch playlist info: {e}",
                 url=url,
                 critical=True,
                 is_logged=True

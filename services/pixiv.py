@@ -1,11 +1,14 @@
 import asyncio
 import os
 import re
+from pathlib import Path
+from typing import List
 
 import aiofiles
 import aiohttp
 from fake_useragent import UserAgent
 
+from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
 from utils.error_handler import BotError, ErrorCode
 
@@ -32,7 +35,7 @@ class PixivService(BaseService):
     def is_playlist(self, url: str) -> bool:
         return False
 
-    async def download(self, url: str) -> list:
+    async def download(self, url: str) -> List[MediaContent]:
         result = []
 
         image_url_pattern = re.compile(
@@ -68,7 +71,12 @@ class PixivService(BaseService):
                 filename = self.output_path + img_url.split("/")[-1]
                 await self._download_photo(img_url, filename)
 
-                result.append({"type": "image", "path": filename})
+                result.append(
+                    MediaContent(
+                        type=MediaType.PHOTO,
+                        path=Path(filename),
+                    )
+                )
 
         except BotError as e:
             raise e

@@ -2,6 +2,8 @@ import asyncio
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import List
 
 import aiofiles
 import aiohttp
@@ -9,6 +11,7 @@ import yt_dlp
 from aiofiles import os as aios
 from yt_dlp.utils import sanitize_filename
 
+from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
 from utils import random_cookie_file, update_metadata
 from utils.error_handler import BotError, ErrorCode
@@ -45,9 +48,7 @@ class SoundCloudService(BaseService):
             re.match(r"^https?:\/\/(www\.)?soundcloud\.com\/[\w\-]+\/sets\/[\w\-]+$", url)
         )
 
-    async def download(self, url: str) -> list:
-        result = []
-
+    async def download(self, url: str) -> List[MediaContent]:
         options = self._get_audio_options()
         try:
             with yt_dlp.YoutubeDL(options) as ydl:
@@ -70,9 +71,9 @@ class SoundCloudService(BaseService):
                 if title is None:
                     title = ""
 
-                artist = info_dict.get("uploader")
-                if artist is None:
-                    artist = ""
+                permofer = info_dict.get("uploader")
+                if permofer is None:
+                    permofer = ""
 
                 cover_url = self._get_cover_url(info_dict)
 
@@ -92,28 +93,48 @@ class SoundCloudService(BaseService):
                 if cover_url is None:
                     cover_url = info_dict.get("thumbnail", None)
 
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(cover_url) as response:
-                        response.raise_for_status()
-                        async with aiofiles.open(cover_path, 'wb') as f:
-                            async for chunk in response.content.iter_chunked(1024):
-                                await f.write(chunk)
+                if cover_url:
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(cover_url) as response:
+                                response.raise_for_status()
+                                cover_path = f"{base_path}.jpg"
+                                async with aiofiles.open(cover_path, 'wb') as f:
+                                    async for chunk in response.content.iter_chunked(1024):
+                                        await f.write(chunk)
+
+                        if not await aios.path.exists(cover_path):
+                            cover_path = None
+
+                    except Exception:
+                        cover_path = None
 
                 await loop.run_in_executor(
                     self._download_executor,
                     lambda: update_metadata(
                         audio_path,
                         title=title,
-                        artist=artist,
+                        artist=permofer,
                         cover_file=cover_path
                     )
                 )
 
-                if await aios.path.exists(audio_path) or await aios.path.exists(cover_path):
-                    result.append(
-                        {"type": "audio", "path": audio_path, "cover": cover_path}
+                if await aios.path.exists(audio_path):
+                    return [MediaContent(
+                        type=MediaType.AUDIO,
+                        path=Path(audio_path),
+                        duration=info_dict.get("duration", None),
+                        title=title,
+                        performer=permofer,
+                        cover=Path(cover_path) if cover_path else None
+                    )]
+                else:
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message="Audio file not found after download",
+                        url=url,
+                        is_logged=True
                     )
-            return result
 
         except BotError as e:
             raise e

@@ -1,9 +1,13 @@
 import logging
 import re
+from pathlib import Path
+from typing import List
 
 from ttsave_api import ContentType, TTSave
 
+from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
+from utils import truncate_string
 from utils.error_handler import BotError, ErrorCode
 
 logger = logging.getLogger(__name__)
@@ -26,7 +30,7 @@ class TikTokService(BaseService):
     def is_playlist(self, url: str) -> bool:
         return False
 
-    async def download(self, url: str) -> list:
+    async def download(self, url: str) -> List[MediaContent]:
         result = []
         try:
             saved_files = self.ttsave_client.download(
@@ -43,17 +47,32 @@ class TikTokService(BaseService):
                     is_logged=True
                 )
 
-            for file in saved_files["files"]:
-                if file.endswith(".mp4"):
-                    result.append({"type": "video", "path": file})
-                elif file.endswith(".jpg") or file.endswith(".png"):
-                    result.append({"type": "image", "path": file})
-                elif file.endswith(".mp3"):
-                    result.append({"type": "audio", "path": file, "cover": None})
-
             title = saved_files["meta"]["desc"] if saved_files["meta"]["desc"] else ""
 
-            result.append({"type": "title", "title": title})
+            for file in saved_files["files"]:
+                if file.endswith(".mp4"):
+                    result.append(
+                        MediaContent(
+                            type=MediaType.VIDEO,
+                            path=Path(file),
+                            title=truncate_string(title)
+                        )
+                        )
+                elif file.endswith(".jpg") or file.endswith(".png"):
+                    result.append(
+                        MediaContent(
+                            type=MediaType.PHOTO,
+                            path=Path(file),
+                            title=truncate_string(title)
+                        )
+                        )
+                elif file.endswith(".mp3"):
+                    result.append(
+                        MediaContent(
+                            type=MediaType.AUDIO,
+                            path=Path(file)
+                        )
+                        )
 
             return result
         except BotError as e:

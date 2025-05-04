@@ -2,13 +2,16 @@ import asyncio
 import logging
 import os
 import re
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, List
 
 import aiofiles
 import aiohttp
 from fake_useragent import UserAgent
 
+from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
+from utils import truncate_string
 from utils.error_handler import BotError, ErrorCode
 
 ua = UserAgent()
@@ -32,7 +35,7 @@ class TwitterService(BaseService):
     def is_playlist(self, url: str) -> bool:
         return False
 
-    async def download(self, url: str) -> list:
+    async def download(self, url: str) -> List[MediaContent]:
         result = []
         try:
             match = re.search(r"status/(\d+)", url)
@@ -44,19 +47,30 @@ class TwitterService(BaseService):
 
             medias = tweet_dict["data"]["tweetResult"]["result"]["legacy"]["extended_entities"]["media"]
 
+            author = tweet_dict["data"]["tweetResult"]["result"]["core"]["user_results"]["result"]["legacy"]["name"]
+            title = tweet_dict["data"]["tweetResult"]["result"]["legacy"]["full_text"]
+
             tasks = []
             for media in medias:
                 if media["type"] == "photo":
                     photo_url = media["media_url_https"]
-                    match = re.search(r"([^/]+\.(?:jpg|jpeg|png))", photo_url, re.IGNORECASE)
+                    match = re.search(
+                        r"([^/]+\.(?:jpg|jpeg|png))", photo_url, re.IGNORECASE
+                    )
                     if match is None:
                         continue
                     filename = os.path.join(
                         self.output_path,
-                        self._sanitize_filename(os.path.basename(photo_url))
+                        self._sanitize_filename(os.path.basename(photo_url)),
                     )
                     tasks.append(self._download_file(photo_url, filename))
-                    result.append({"type": "image", "path": filename})
+                    result.append(
+                        MediaContent(
+                            type=MediaType.PHOTO,
+                            path=Path(filename),
+                            title=truncate_string(f"{author} - {title}")
+                        )
+                    )
 
                 elif media["type"] == "video":
                     variants = media["video_info"]["variants"]
@@ -74,7 +88,13 @@ class TwitterService(BaseService):
                     filename = self.output_path + "/" + match.group(1)
 
                     tasks.append(self._download_file(video_url, filename))
-                    result.append({"type": "video", "path": filename})
+                    result.append(
+                        MediaContent(
+                            type=MediaType.VIDEO,
+                            path=Path(filename),
+                            title=truncate_string(f"{author} - {title}")
+                            )
+                        )
 
                 elif media["type"] == "animated_gif":
                     variant = media["video_info"]["variants"][0]
@@ -87,14 +107,15 @@ class TwitterService(BaseService):
                     filename = self.output_path + "/" + match.group(1)
 
                     tasks.append(self._download_file(video_url, filename))
-                    result.append({"type": "gif", "path": filename})
+                    result.append(
+                        MediaContent(
+                            type=MediaType.GIF,
+                            path=Path(filename)
+                            )
+                        )
 
             await asyncio.gather(*tasks)
 
-            author = tweet_dict["data"]["tweetResult"]["result"]["core"]["user_results"]["result"]["legacy"]["name"]
-            title = tweet_dict["data"]["tweetResult"]["result"]["legacy"]["full_text"]
-
-            result.append({"type": "title", "title": f"{author} - {title}"})
         except BotError as e:
             raise e
         except Exception as e:
@@ -104,7 +125,7 @@ class TwitterService(BaseService):
                 message=str(e),
                 url=url,
                 critical=True,
-                is_logged=True
+                is_logged=True,
             )
 
         return result
@@ -124,7 +145,7 @@ class TwitterService(BaseService):
                         code=ErrorCode.INTERNAL_ERROR,
                         message=f"Failed to get guest token. Status code: {response.status}",
                         critical=True,
-                        is_logged=True
+                        is_logged=True,
                     )
 
     async def _get_tweet_info(self, tweet_id: int) -> Dict[str, Any]:
@@ -171,7 +192,7 @@ class TwitterService(BaseService):
                         )
 
                 async with aiofiles.open(filename, "wb") as f:
-                    async for chunk in response.content.iter_chunked(1024*8):
+                    async for chunk in response.content.iter_chunked(1024 * 8):
                         await f.write(chunk)
 
     def _sanitize_filename(self, filename: str) -> str:

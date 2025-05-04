@@ -95,22 +95,25 @@ async def handle_single_download(
                 return
             user_id = user.id
             content = await service.download(url)
-
         if not content:
             raise BotError(
                 code=ErrorCode.DOWNLOAD_FAILED,
                 url=url,
-                critical=True
+                message="No content found",
+                critical=True,
+                is_logged=True
             )
 
         await MediaHandler.send_media_content(message, content)
 
     except Exception as e:
-        if isinstance(e, Exception):
+        if not isinstance(e, BotError):
             e = BotError(
                 code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"URL Handler: {str(e)}",
                 url=url,
-                critical=True
+                critical=True,
+                is_logged=True
             )
         await handle_download_error(message, e)
 
@@ -139,11 +142,13 @@ async def handle_playlist_download(service, url: str, message: types.Message) ->
 
         await message.reply(_("Download completed."))
     except Exception as e:
-        if isinstance(e, Exception):
+        if not isinstance(e, BotError):
             e = BotError(
                 code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Playlists: {str(e)}",
                 url=url,
-                critical=True
+                critical=True,
+                is_logged=True
             )
         await handle_download_error(message, e)
     finally:

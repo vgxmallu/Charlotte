@@ -1,7 +1,10 @@
 import logging
+from dataclasses import dataclass
+from enum import Enum
 from typing import Optional
 
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.utils.i18n import gettext as _
 
 from config.secrets import ADMIN_ID
@@ -9,16 +12,7 @@ from config.secrets import ADMIN_ID
 logger = logging.getLogger(__name__)
 
 
-class BotError(Exception):
-    def __init__(self, code: str, message: Optional[str] = None, url: Optional[str] = None, critical: bool = False, is_logged: bool = False):
-        self.code = code  # For example: "E001"
-        self.url = url or "None" # Media URL
-        self.message = message  # Message for Owner
-        self.critical = critical  # Send to owner?
-        self.is_logged = is_logged # Need to be logged?
-        super().__init__(message)
-
-class ErrorCode:
+class ErrorCode(Enum):
     INVALID_URL = "E001"
     LARGE_FILE = "E002"
     SIZE_CHECK_FAIL = "E003"
@@ -26,6 +20,14 @@ class ErrorCode:
     DOWNLOAD_CANCELLED = "E005"
     PLAYLIST_INFO_ERROR = "E006"
     INTERNAL_ERROR = "E500"
+
+@dataclass
+class BotError(Exception):
+    code: ErrorCode  # For example: "E001"
+    url: Optional[str] = None # Media URL
+    message: Optional[str] = None  # Message for Owner
+    critical: bool = False # Send to owner?
+    is_logged: bool = False # Need to be logged?
 
 
 async def handle_download_error(message: types.Message, error: BotError) -> None:
@@ -45,12 +47,11 @@ async def handle_download_error(message: types.Message, error: BotError) -> None
             await message.answer(_("Get playlist items error"))
         case ErrorCode.INTERNAL_ERROR:
             await message.answer(_("Sorry, there was an error. Try again later 🧡"))
-
     if error.critical:
         bot = message.bot
         if bot is None:
             return
-        await bot.send_message(ADMIN_ID, f"Sorry, there was an error:\n {error.url}\n\n```{error.message}```")
+        await bot.send_message(ADMIN_ID, f"Sorry, there was an error:\n {error.url}\n\n<pre>{error.message}</pre>", parse_mode=ParseMode.HTML)
 
     if error.is_logged:
         logger.error(f"Error downloading media: {error.message}")
