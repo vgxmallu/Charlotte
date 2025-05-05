@@ -7,7 +7,6 @@ from .is_image_or_video import is_image_or_video
 from .music_search_engine import search_music
 from .get_applemusic_author import get_applemusic_author
 from .get_spotify_author import get_spotify_author
-from .instagram_login import login_user
 from .spotify_login import get_access_token
 
 #  Work with language
@@ -37,7 +36,6 @@ __all__ = [
     "random_emoji",
     "truncate_string",
     "get_service_handler",
-    "login_user",
     "handle_download_error",
     "get_access_token",
     "random_cookie_file",

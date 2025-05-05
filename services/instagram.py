@@ -4,14 +4,14 @@ import os
 import re
 from functools import partial
 from pathlib import Path
-from typing import List
-
+import urllib.parse
+from typing import List, Tuple
+import json
 import aiofiles
 import aiohttp
 
 from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
-from utils import login_user, truncate_string
 from utils.error_handler import BotError, ErrorCode
 
 logger = logging.getLogger(__name__)
@@ -21,11 +21,8 @@ class InstagramService(BaseService):
     name = "Instagram"
 
     def __init__(self, output_path: str = "other/downloadsTemp"):
-        logger.info("Initializing InstagramService")
-        self.cl = login_user()
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
-        logger.info(f"Output path set to: {self.output_path}")
 
     def is_supported(self, url: str) -> bool:
         return bool(
@@ -42,35 +39,7 @@ class InstagramService(BaseService):
         result = []
 
         try:
-            media_pk = await run_in_thread(self.cl.media_pk_from_url, url)
-            media = await run_in_thread(self.cl.media_info, media_pk)
-
-            media_items = []
-            if media.media_type == 8:
-                for i, res in enumerate(media.resources):
-                    media_items.append((res, f"{media_pk}_{i}"))
-            else:
-                media_items.append((media, str(media_pk)))
-
-            media_urls, filenames = [], []
-            for item, name in media_items:
-                if item.media_type == 1:
-                    media_url = str(getattr(item, "thumbnail_url", "")) or str(getattr(item, "url", ""))
-                    ext = "jpg"
-                elif item.media_type == 2:
-                    media_url = str(getattr(item, "video_url", ""))
-                    ext = "mp4"
-                else:
-                    logger.warning(f"Unsupported media type: {item.media_type}")
-                    continue
-
-                if not media_url:
-                    logger.warning(f"No media URL found for {name}")
-                    continue
-
-                filename = f"{self.output_path}/{name}.{ext}"
-                media_urls.append(media_url)
-                filenames.append(filename)
+            media_urls, filenames = await self._get_instagram_post(url)
 
             downloaded = await download_all_media(media_urls, filenames)
 
@@ -79,13 +48,80 @@ class InstagramService(BaseService):
                     result.append(
                         MediaContent(
                             type=MediaType.PHOTO if path.endswith(".jpg") else MediaType.VIDEO,
-                            path=Path(path),
-                            title=truncate_string(getattr(media, "caption_text", ""))
+                            path=Path(path)
                         )
                     )
 
             return result
+        except BotError as e:
+            raise e
+        except Exception as e:
+            raise BotError(
+                code=ErrorCode.DOWNLOAD_FAILED,
+                message=f"Instagram: {e}",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )
 
+    async def _get_instagram_post(self, url: str) -> Tuple[List[str], List[str]]:
+        # Source: https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/instagram.py
+        pattern = r'https://www\.instagram\.com/(?:p|reel)/([A-Za-z0-9_-]+)'
+        match = re.match(pattern, url)
+        if match:
+            short_code = match.group(1)
+        else:
+            raise ValueError("Invalid Instagram URL")
+
+        variables = {
+            'shortcode': short_code,
+            'child_comment_count': 3,
+            'fetch_comment_count': 40,
+            'parent_comment_count': 24,
+            'has_threaded_comments': True,
+        }
+
+        query_params = {
+            'doc_id': '8845758582119845',
+            'variables': json.dumps(variables, separators=(',', ':')),
+        }
+        full_url = f'https://www.instagram.com/graphql/query/?{urllib.parse.urlencode(query_params)}'
+
+        headers = {
+            'X-IG-App-ID': '936619743392459',
+            'X-ASBD-ID': '198387',
+            'X-IG-WWW-Claim': '0',
+            'Origin': 'https://www.instagram.com',
+            'Accept': '*/*',
+            'X-CSRFToken': '',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Referer': url,
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(full_url, headers=headers) as response:
+                    raw_data = await response.text()
+
+            data_json = json.loads(raw_data)
+
+            post_info = data_json['data']['xdt_shortcode_media']
+
+            images = []
+            filenames = []
+
+            if post_info["__typename"] == "XDTGraphSidecar":
+                for edge in post_info["edge_sidecar_to_children"]["edges"]:
+                    images.append(edge["node"]["display_url"])
+                    filenames.append(f"{edge['node']['shortcode']}.jpg")
+            elif post_info["__typename"] == "XDTGraphImage":
+                images.append(post_info["display_url"])
+                filenames.append(f"{short_code}.jpg")
+            elif post_info["__typename"] == "XDTGraphVideo":
+                images.append(post_info["video_url"])
+                filenames.append(f"{short_code}.jpg")
+
+            return images, filenames
         except Exception as e:
             raise BotError(
                 code=ErrorCode.DOWNLOAD_FAILED,

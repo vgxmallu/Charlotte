@@ -20,6 +20,21 @@
 If you like this repository, feel free to leave a star ⭐ to motivate me improve!
 
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=JellyTyan&repo=Charlotte&theme=tokyonight)](https://github.com/JellyTyan/Charlotte)
+<!-- SERVICES -->
+## <img src="https://cdn.discordapp.com/emojis/1119261362632278068.webp?size=240" width="20px" height="20px"> Available Services
+- [x] Youtube / Shorts
+- [x] Youtube Music
+- [x] SoundCloud
+- [x] Spotify
+- [x] Apple Music
+- [x] Pinterest
+- [x] Instagram
+- [x] Pixiv
+- [x] X (Twitter)
+- [x] BiliBili
+- [x] TikTok
+
+<!-- FEATURES -->
 ## <img src="https://cdn.discordapp.com/emojis/852881450667081728.gif" width="20px" height="20px">》Features
 - [x] High speed
 - [x] Easy to use
@@ -34,7 +49,6 @@ If you like this repository, feel free to leave a star ⭐ to motivate me improv
 - Telegram Bot Token. Get it from [BotFather](https://t.me/BotFather)
 - Spotify client ID `for Spotify support` [Click here to get](https://developer.spotify.com/dashboard/login)
 - Spotify client Secret `for Spotify support` [Click here to get](https://developer.spotify.com/dashboard/login)
-- Your instagram profile username and password `for instagram support`
 
 <!-- INSTALLATION GUIDE -->
 ## <img src="https://cdn.discordapp.com/emojis/814216203466965052.png" width="25px" height="25px">》Installation Guide
