@@ -119,7 +119,7 @@ class InstagramService(BaseService):
                 filenames.append(f"{short_code}.jpg")
             elif post_info["__typename"] == "XDTGraphVideo":
                 images.append(post_info["video_url"])
-                filenames.append(f"{short_code}.jpg")
+                filenames.append(f"{short_code}.mp4")
 
             return images, filenames
         except Exception as e:
