@@ -1,20 +1,22 @@
 import asyncio
+import json
 import logging
 import os
+import random
 import re
+import urllib.parse
 from functools import partial
 from pathlib import Path
-import urllib.parse
 from typing import List, Tuple
-import json
+
 import aiofiles
 import aiohttp
-import secrets
+from fake_useragent import UserAgent
 
 from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
+from utils import load_proxies
 from utils.error_handler import BotError, ErrorCode
-from fake_useragent import UserAgent
 
 ua = UserAgent(platforms=["desktop"])
 
@@ -99,18 +101,22 @@ class InstagramService(BaseService):
             'Host': 'www.instagram.com',
             'User-Agent': self.user_agent,
             'Accept': '*/*',
-            # 'X-CSRFToken': '',
             'X-Requested-With': 'XMLHttpRequest',
             'Referer': url,
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Dest': 'empty',
         }
+
+        proxies = load_proxies("proxies.txt")
+
+        proxy = random.choice(proxies) if proxies else None
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(full_url, headers=headers) as response:
+                async with session.get(full_url, headers=headers, proxy=proxy) as response:
                     raw_data = await response.text()
-
-            with open("instagram_response.json", "w") as f:
-                f.write(raw_data)
 
             data_json = json.loads(raw_data)
 
@@ -132,6 +138,7 @@ class InstagramService(BaseService):
 
             return images, filenames
         except Exception as e:
+            print(f"Ошибка соединения: {type(e).__name__}")
             raise BotError(
                 code=ErrorCode.DOWNLOAD_FAILED,
                 message=f"Instagram: {e}",

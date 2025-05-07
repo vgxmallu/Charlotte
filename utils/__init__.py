@@ -22,6 +22,7 @@ from .random_emoji import random_cookie_file
 from .truncate_string import truncate_string
 from .register_services import get_service_handler
 from .error_handler import handle_download_error
+from .proxy import load_proxies
 
 __all__ = [
     "delete_files",
@@ -39,4 +40,5 @@ __all__ = [
     "handle_download_error",
     "get_access_token",
     "random_cookie_file",
+    "load_proxies",
 ]

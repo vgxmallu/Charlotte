@@ -170,3 +170,4 @@ cookies/*
 .DS_Store
 /har_and_cookies
 /generated_media
+proxies.txt
