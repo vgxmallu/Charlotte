@@ -13,6 +13,9 @@ import aiohttp
 from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
 from utils.error_handler import BotError, ErrorCode
+from fake_useragent import UserAgent
+
+ua = UserAgent(platforms=["desktop"])
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +26,7 @@ class InstagramService(BaseService):
     def __init__(self, output_path: str = "other/downloadsTemp"):
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
+        self.user_agent = ua.random
 
     def is_supported(self, url: str) -> bool:
         return bool(
@@ -92,8 +96,10 @@ class InstagramService(BaseService):
             'X-ASBD-ID': '198387',
             'X-IG-WWW-Claim': '0',
             'Origin': 'https://www.instagram.com',
+            'Host': 'www.instagram.com',
+            'User-Agent': self.user_agent,
             'Accept': '*/*',
-            'X-CSRFToken': '',
+            # 'X-CSRFToken': '',
             'X-Requested-With': 'XMLHttpRequest',
             'Referer': url,
         }
