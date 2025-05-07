@@ -9,6 +9,7 @@ from typing import List, Tuple
 import json
 import aiofiles
 import aiohttp
+import secrets
 
 from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
@@ -95,7 +96,6 @@ class InstagramService(BaseService):
             'X-IG-App-ID': '936619743392459',
             'X-ASBD-ID': '198387',
             'X-IG-WWW-Claim': '0',
-            'Origin': 'https://www.instagram.com',
             'Host': 'www.instagram.com',
             'User-Agent': self.user_agent,
             'Accept': '*/*',
@@ -108,6 +108,9 @@ class InstagramService(BaseService):
             async with aiohttp.ClientSession() as session:
                 async with session.get(full_url, headers=headers) as response:
                     raw_data = await response.text()
+
+            with open("instagram_response.json", "w") as f:
+                f.write(raw_data)
 
             data_json = json.loads(raw_data)
 
