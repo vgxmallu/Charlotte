@@ -45,6 +45,17 @@ class TwitterService(BaseService):
 
             tweet_dict = await self._get_tweet_info(tweet_id)
 
+            status = tweet_dict.get("data", {}).get("tweetResult", {}).get("result", {})
+
+            if status.get("__typename") == "TweetUnavailable":
+                raise BotError(
+                    code=ErrorCode.INVALID_URL,
+                    url=url,
+                    message="Tweet is unavailable",
+                    critical=False,
+                    is_logged=False
+                )
+
             medias = tweet_dict["data"]["tweetResult"]["result"]["legacy"]["extended_entities"]["media"]
 
             author = tweet_dict["data"]["tweetResult"]["result"]["core"]["user_results"]["result"]["legacy"]["name"]
