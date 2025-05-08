@@ -11,6 +11,7 @@ from typing import List, Tuple
 
 import aiofiles
 import aiohttp
+import yt_dlp
 from fake_useragent import UserAgent
 
 from models.media_models import MediaContent, MediaType
@@ -49,6 +50,15 @@ class InstagramService(BaseService):
             media_urls, filenames = await self._get_instagram_post(url)
 
             downloaded = await download_all_media(media_urls, filenames)
+
+            if isinstance(downloaded, BotError):
+                raise BotError(
+                    code=ErrorCode.DOWNLOAD_FAILED,
+                    message=f"{downloaded.message}",
+                    url=url,
+                    critical=True,
+                    is_logged=True,
+                )
 
             for path in downloaded:
                 if isinstance(path, str):
@@ -122,6 +132,15 @@ class InstagramService(BaseService):
 
             post_info = data_json['data']['xdt_shortcode_media']
 
+            if post_info is None:
+                raise BotError(
+                    code=ErrorCode.INVALID_URL,
+                    message="Instagram: Post not found",
+                    url=url,
+                    critical=False,
+                    is_logged=False,
+                )
+
             images = []
             filenames = []
 
@@ -135,10 +154,19 @@ class InstagramService(BaseService):
             elif post_info["__typename"] == "XDTGraphVideo":
                 images.append(post_info["video_url"])
                 filenames.append(f"{short_code}.mp4")
+            else:
+                raise BotError(
+                    code=ErrorCode.INTERNAL_ERROR,
+                    message=f"Unknown post type: {post_info['__typename']}",
+                    url=url,
+                    critical=False,
+                    is_logged=True,
+                )
 
             return images, filenames
+        except BotError as e:
+            raise e
         except Exception as e:
-            print(f"Ошибка соединения: {type(e).__name__}")
             raise BotError(
                 code=ErrorCode.DOWNLOAD_FAILED,
                 message=f"Instagram: {e}",
@@ -168,10 +196,12 @@ async def download_media(session, url, filename) -> str:
                     critical=False,
                     is_logged=True,
                 )
+    except BotError as e:
+        raise e
     except Exception as e:
         raise BotError(
             code=ErrorCode.DOWNLOAD_FAILED,
-            message=f"Instagram download: {e}",
+            message=f"Instagram download: {type(e).__name__} – {e}",
             url=url,
             critical=True,
             is_logged=True,
@@ -180,7 +210,39 @@ async def download_media(session, url, filename) -> str:
 
 async def download_all_media(media_urls, filenames):
     async with aiohttp.ClientSession() as session:
-        tasks = [download_media(session, url, name)
-            for url, name in zip(media_urls, filenames)]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        tasks = []
+        for url, name in zip(media_urls, filenames):
+            if name.endswith(".mp4"):
+                tasks.append(download_video_with_ytdlp(url, name))
+            else:
+                tasks.append(download_media(session, url, name))
+        results = await asyncio.gather(*tasks)
         return results
+
+async def download_video_with_ytdlp(url: str, filename: str) -> str:
+    try:
+        def _download():
+            ydl_opts = {
+                'outtmpl': "other/downloadsTemp/%(id)s.%(ext)s",
+                'quiet': True,
+                'format': 'mp4',
+                'merge_output_format': 'mp4',
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                return ydl.prepare_filename(info)
+
+        downloaded_path = await run_in_thread(_download)
+
+        final_path = os.path.join("other/downloadsTemp", filename)
+        os.rename(downloaded_path, final_path)
+        return final_path
+
+    except Exception as e:
+        raise BotError(
+            code=ErrorCode.DOWNLOAD_FAILED,
+            message=f"yt-dlp failed: {type(e).__name__} – {e}",
+            url=url,
+            critical=True,
+            is_logged=True,
+        )
