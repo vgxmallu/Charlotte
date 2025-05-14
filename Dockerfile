@@ -11,8 +11,8 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pybabel compile -d locales -D messages
-
 COPY . .
+
+RUN pybabel compile -d locales -D messages
 
 CMD ["python", "main.py"]
