@@ -90,6 +90,8 @@ class InstagramService(BaseService):
         else:
             raise ValueError("Invalid Instagram URL")
 
+        crsf_token = await self._get_csrf_from_embed(shortcode=short_code)
+
         variables = {
             'shortcode': short_code,
             'child_comment_count': 3,
@@ -112,6 +114,7 @@ class InstagramService(BaseService):
             'User-Agent': self.user_agent,
             'Accept': '*/*',
             'X-Requested-With': 'XMLHttpRequest',
+            'x-csrftoken': crsf_token,
             'Referer': url,
             'Accept-Language': 'en-US,en;q=0.9',
             'Sec-Fetch-Site': 'same-origin',
@@ -174,6 +177,27 @@ class InstagramService(BaseService):
                 critical=True,
                 is_logged=True,
             )
+
+
+    async def _get_csrf_from_embed(self, shortcode: str) -> str:
+        url = f"https://www.instagram.com/p/{shortcode}/embed/"
+        headers={
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as response:
+                resp = await response.text()
+
+        pattern = re.compile(
+            r'\["InstagramSecurityConfig",\s*\[\],\s*(\{[^}]*"csrf_token"\s*:\s*"([^"]+)"[^}]*\})'
+        )
+        match = pattern.search(resp)
+        if not match:
+            raise ValueError("CSRF token not found in embed page")
+        config_json = match.group(1)
+        config = json.loads(config_json)
+        return config["csrf_token"]
 
 
 async def run_in_thread(func, *args):
