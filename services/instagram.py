@@ -90,43 +90,43 @@ class InstagramService(BaseService):
         else:
             raise ValueError("Invalid Instagram URL")
 
-        crsf_token = await self._get_csrf_from_embed(shortcode=short_code)
-
-        variables = {
-            'shortcode': short_code,
-            'child_comment_count': 3,
-            'fetch_comment_count': 40,
-            'parent_comment_count': 24,
-            'has_threaded_comments': True,
-        }
-
-        query_params = {
-            'doc_id': '8845758582119845',
-            'variables': json.dumps(variables, separators=(',', ':')),
-        }
-        full_url = f'https://www.instagram.com/graphql/query/?{urllib.parse.urlencode(query_params)}'
-
-        headers = {
-            'X-IG-App-ID': '936619743392459',
-            'X-ASBD-ID': '198387',
-            'X-IG-WWW-Claim': '0',
-            'Host': 'www.instagram.com',
-            'User-Agent': self.user_agent,
-            'Accept': '*/*',
-            'X-Requested-With': 'XMLHttpRequest',
-            'x-csrftoken': crsf_token,
-            'Referer': url,
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Sec-Fetch-Site': 'same-origin',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Dest': 'empty',
-        }
-
-        proxies = load_proxies("proxies.txt")
-
-        proxy = random.choice(proxies) if proxies else None
-
         try:
+            crsf_token = await self._get_csrf_from_embed(shortcode=short_code)
+
+            variables = {
+                'shortcode': short_code,
+                'child_comment_count': 3,
+                'fetch_comment_count': 40,
+                'parent_comment_count': 24,
+                'has_threaded_comments': True,
+            }
+
+            query_params = {
+                'doc_id': '8845758582119845',
+                'variables': json.dumps(variables, separators=(',', ':')),
+            }
+            full_url = f'https://www.instagram.com/graphql/query/?{urllib.parse.urlencode(query_params)}'
+
+            headers = {
+                'X-IG-App-ID': '936619743392459',
+                'X-ASBD-ID': '198387',
+                'X-IG-WWW-Claim': '0',
+                'Host': 'www.instagram.com',
+                'User-Agent': self.user_agent,
+                'Accept': '*/*',
+                'X-Requested-With': 'XMLHttpRequest',
+                'x-csrftoken': crsf_token,
+                'Referer': url,
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Sec-Fetch-Site': 'same-origin',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Dest': 'empty',
+            }
+
+            proxies = load_proxies("proxies.txt")
+
+            proxy = random.choice(proxies) if proxies else None
+
             async with aiohttp.ClientSession() as session:
                 async with session.get(full_url, headers=headers, proxy=proxy) as response:
                     raw_data = await response.text()
