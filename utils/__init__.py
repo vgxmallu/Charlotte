@@ -8,6 +8,7 @@ from .music_search_engine import search_music
 from .get_applemusic_author import get_applemusic_author
 from .get_spotify_author import get_spotify_author
 from .spotify_login import get_access_token
+from .instagram_session import get_instagram_session
 
 #  Work with language
 from .google_translate import translate_text
@@ -41,4 +42,5 @@ __all__ = [
     "get_access_token",
     "random_cookie_file",
     "load_proxies",
+    "get_instagram_session"
 ]

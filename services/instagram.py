@@ -12,14 +12,11 @@ from typing import List, Tuple
 import aiofiles
 import aiohttp
 import yt_dlp
-from fake_useragent import UserAgent
 
 from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
-from utils import load_proxies
+from utils import load_proxies, get_instagram_session
 from utils.error_handler import BotError, ErrorCode
-
-ua = UserAgent(platforms=["desktop"])
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +27,6 @@ class InstagramService(BaseService):
     def __init__(self, output_path: str = "other/downloadsTemp"):
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
-        self.user_agent = ua.random
 
     def is_supported(self, url: str) -> bool:
         return bool(
@@ -82,7 +78,6 @@ class InstagramService(BaseService):
             )
 
     async def _get_instagram_post(self, url: str) -> Tuple[List[str], List[str]]:
-        # Source: https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/instagram.py
         pattern = r'https://www\.instagram\.com/(?:p|reel)/([A-Za-z0-9_-]+)'
         match = re.match(pattern, url)
         if match:
@@ -91,7 +86,7 @@ class InstagramService(BaseService):
             raise ValueError("Invalid Instagram URL")
 
         try:
-            crsf_token = await self._get_csrf_from_embed(shortcode=short_code)
+            session = await get_instagram_session()
 
             variables = {
                 'shortcode': short_code,
@@ -110,25 +105,27 @@ class InstagramService(BaseService):
             headers = {
                 'X-IG-App-ID': '936619743392459',
                 'X-ASBD-ID': '198387',
-                'X-IG-WWW-Claim': '0',
+                'x-ig-www-claim': '0',
                 'Host': 'www.instagram.com',
-                'User-Agent': self.user_agent,
+                'User-Agent': session["headers"]["user-agent"],
                 'Accept': '*/*',
                 'X-Requested-With': 'XMLHttpRequest',
-                'x-csrftoken': crsf_token,
-                'Referer': url,
+                'x-csrftoken': session["headers"]["x-csrftoken"],
+                'referer': url,
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Sec-Fetch-Site': 'same-origin',
                 'Sec-Fetch-Mode': 'cors',
                 'Sec-Fetch-Dest': 'empty',
             }
 
+            cookies = session["cookies"]
+
             proxies = load_proxies("proxies.txt")
 
             proxy = random.choice(proxies) if proxies else None
 
             async with aiohttp.ClientSession() as session:
-                async with session.get(full_url, headers=headers, proxy=proxy) as response:
+                async with session.get(full_url, headers=headers, proxy=proxy, cookies=cookies) as response:
                     raw_data = await response.text()
 
             data_json = json.loads(raw_data)
@@ -177,28 +174,6 @@ class InstagramService(BaseService):
                 critical=True,
                 is_logged=True,
             )
-
-
-    async def _get_csrf_from_embed(self, shortcode: str) -> str:
-        url = f"https://www.instagram.com/p/{shortcode}/embed/"
-        headers={
-            "User-Agent": "Mozilla/5.0",
-            "Accept-Language": "en-US,en;q=0.9",
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                resp = await response.text()
-
-        pattern = re.compile(
-            r'\["InstagramSecurityConfig",\s*\[\],\s*(\{[^}]*"csrf_token"\s*:\s*"([^"]+)"[^}]*\})'
-        )
-        match = pattern.search(resp)
-        if not match:
-            raise ValueError("CSRF token not found in embed page")
-        config_json = match.group(1)
-        config = json.loads(config_json)
-        return config["csrf_token"]
-
 
 async def run_in_thread(func, *args):
     loop = asyncio.get_running_loop()
