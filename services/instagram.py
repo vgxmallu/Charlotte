@@ -86,7 +86,15 @@ class InstagramService(BaseService):
             raise ValueError("Invalid Instagram URL")
 
         try:
-            session = await get_instagram_session()
+            ig_session = await get_instagram_session()
+            if not ig_session:
+                raise BotError(
+                    code=ErrorCode.INTERNAL_ERROR,
+                    message="Instagram: Failed to get session",
+                    url=url,
+                    critical=True,
+                    is_logged=True,
+                )
 
             variables = {
                 'shortcode': short_code,
@@ -96,37 +104,37 @@ class InstagramService(BaseService):
                 'has_threaded_comments': True,
             }
 
-            query_params = {
+            params = {
                 'doc_id': '8845758582119845',
                 'variables': json.dumps(variables, separators=(',', ':')),
             }
-            full_url = f'https://www.instagram.com/graphql/query/?{urllib.parse.urlencode(query_params)}'
+
+            cookies = ig_session.get("cookies", {})
 
             headers = {
-                'X-IG-App-ID': '936619743392459',
-                'X-ASBD-ID': '198387',
-                'x-ig-www-claim': '0',
-                'Host': 'www.instagram.com',
-                'User-Agent': session["headers"]["user-agent"],
-                'Accept': '*/*',
-                'X-Requested-With': 'XMLHttpRequest',
-                'x-csrftoken': session["headers"]["x-csrftoken"],
                 'referer': url,
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Sec-Fetch-Site': 'same-origin',
-                'Sec-Fetch-Mode': 'cors',
-                'Sec-Fetch-Dest': 'empty',
+                'User-Agent': ig_session["headers"]["user-agent"],
+                'x-csrftoken': cookies.get("csrftoken", None),
+                'x-ig-app-id': '936619743392459',
+                'x-ig-www-claim': '0',
+                'x-mid': cookies.get("mid", None),
+                'x-requested-with': 'XMLHttpRequest',
+                'x-web-device-id': cookies.get("ig_did", None),
             }
 
-            cookies = session["cookies"]
+            cleaned_headers = clean_dict(headers)
+            cleaned_cookies = clean_dict(cookies)
 
             proxies = load_proxies("proxies.txt")
 
             proxy = random.choice(proxies) if proxies else None
 
             async with aiohttp.ClientSession() as session:
-                async with session.get(full_url, headers=headers, proxy=proxy, cookies=cookies) as response:
+                async with session.get("https://www.instagram.com/graphql/query/", headers=cleaned_headers, proxy=proxy, cookies=cleaned_cookies, params=params) as response:
                     raw_data = await response.text()
+
+            with open ("temp.json", "w") as f:
+                f.write(raw_data)
 
             data_json = json.loads(raw_data)
 
@@ -169,7 +177,7 @@ class InstagramService(BaseService):
         except Exception as e:
             raise BotError(
                 code=ErrorCode.DOWNLOAD_FAILED,
-                message=f"Instagram: {e}",
+                message=f"Instagram: {e.with_traceback}",
                 url=url,
                 critical=True,
                 is_logged=True,
@@ -245,3 +253,6 @@ async def download_video_with_ytdlp(url: str, filename: str) -> str:
             critical=True,
             is_logged=True,
         )
+
+def clean_dict(d):
+    return {str(k): str(v) for k, v in d.items() if v is not None and k is not None}

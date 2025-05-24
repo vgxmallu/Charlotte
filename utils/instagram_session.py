@@ -52,8 +52,10 @@ async def fetch_initial_data():
         "csrftoken": csrf_token,
         "ig_did": ig_did,
         "datr": ig_datr,
-        "mid": ig_mid,
     }
+
+    if ig_mid is not None:
+        cookies['mid'] = ig_mid
 
     return session_cookies, csrf_token, lsd
 
