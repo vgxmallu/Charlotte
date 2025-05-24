@@ -2,8 +2,8 @@ import logging
 import re
 from pathlib import Path
 from typing import List
-
-from ttsave_api import ContentType, TTSave
+import yt_dlp
+import asyncio
 
 from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
@@ -18,7 +18,10 @@ class TikTokService(BaseService):
 
     def __init__(self, output_path: str = "other/downloadsTemp") -> None:
         self.output_path = output_path
-        self.ttsave_client = TTSave()
+        self.yt_dlp_video_options = {
+            "format": "mp4",
+            "outtmpl": f"{output_path}/%(title)s.%(ext)s",
+        }
 
     def is_supported(self, url: str) -> bool:
         return bool(
@@ -33,46 +36,18 @@ class TikTokService(BaseService):
     async def download(self, url: str) -> List[MediaContent]:
         result = []
         try:
-            saved_files = self.ttsave_client.download(
-                url=url,
-                content_type=ContentType.Original,
-                downloads_dir=self.output_path,
-            )
+            with yt_dlp.YoutubeDL(self.yt_dlp_video_options) as ydl:
+                info_dict = await asyncio.to_thread(ydl.extract_info, url, download=False)
+                filename = ydl.prepare_filename(info_dict)
+                await asyncio.to_thread(ydl.download, [url])
 
-            if saved_files is None:
-                raise BotError(
-                    code=ErrorCode.DOWNLOAD_FAILED,
-                    message="Failed to download TikTok. PyTTSave returned empty",
-                    critical=False,
-                    is_logged=True
+            result.append(
+                MediaContent(
+                    type=MediaType.VIDEO,
+                    path=Path(filename),
+                    title=truncate_string(info_dict["title"])
                 )
-
-            title = saved_files["meta"]["desc"] if saved_files["meta"]["desc"] else ""
-
-            for file in saved_files["files"]:
-                if file.endswith(".mp4"):
-                    result.append(
-                        MediaContent(
-                            type=MediaType.VIDEO,
-                            path=Path(file),
-                            title=truncate_string(title)
-                        )
-                        )
-                elif file.endswith(".jpg") or file.endswith(".png"):
-                    result.append(
-                        MediaContent(
-                            type=MediaType.PHOTO,
-                            path=Path(file),
-                            title=truncate_string(title)
-                        )
-                        )
-                elif file.endswith(".mp3"):
-                    result.append(
-                        MediaContent(
-                            type=MediaType.AUDIO,
-                            path=Path(file)
-                        )
-                        )
+            )
 
             return result
         except BotError as e:
