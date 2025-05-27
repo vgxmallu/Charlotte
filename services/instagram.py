@@ -26,6 +26,10 @@ class InstagramService(BaseService):
     def __init__(self, output_path: str = "other/downloadsTemp"):
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
+        self.yt_dlp_opts = {
+            "outtmpl": f"{self.output_path}/%(id)s_{yt_dlp.utils.sanitize_filename('%(title)s')}.%(ext)s",
+            "quiet": True,
+        }
 
     def is_supported(self, url: str) -> bool:
         return bool(
@@ -42,6 +46,33 @@ class InstagramService(BaseService):
         result = []
 
         try:
+            if re.match(r'https://www\.instagram\.com/reel/([A-Za-z0-9_-]+)', url):
+                with yt_dlp.YoutubeDL(self.yt_dlp_opts) as ydl:
+                    loop = asyncio.get_event_loop()
+                    info_dict = await loop.run_in_executor(
+                        self._download_executor,
+                        lambda: ydl.extract_info(url, download=False)
+                    )
+                    if not info_dict:
+                        raise BotError(
+                            code=ErrorCode.DOWNLOAD_FAILED,
+                            message="Failed to get video info",
+                            url=url,
+                            critical=False,
+                            is_logged=True,
+                        )
+                    await loop.run_in_executor(
+                        self._download_executor,
+                        lambda: ydl.download([url])
+                    )
+                    result.append(
+                        MediaContent(
+                            type=MediaType.VIDEO,
+                            path=Path(ydl.prepare_filename(info_dict)),
+                        )
+                    )
+                    return result
+
             media_urls, filenames = await self._get_instagram_post(url)
 
             downloaded = await download_all_media(media_urls, filenames)
