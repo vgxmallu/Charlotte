@@ -1,13 +1,12 @@
 import asyncio
-import json
 import logging
 import os
-import random
 import re
-import urllib.parse
 from functools import partial
 from pathlib import Path
 from typing import List, Tuple
+import instaloader
+from concurrent.futures import ThreadPoolExecutor
 
 import aiofiles
 import aiohttp
@@ -15,7 +14,6 @@ import yt_dlp
 
 from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
-from utils import load_proxies, get_instagram_session
 from utils.error_handler import BotError, ErrorCode
 
 logger = logging.getLogger(__name__)
@@ -23,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class InstagramService(BaseService):
     name = "Instagram"
+    _download_executor = ThreadPoolExecutor(max_workers=5)
 
     def __init__(self, output_path: str = "other/downloadsTemp"):
         self.output_path = output_path
@@ -81,66 +80,21 @@ class InstagramService(BaseService):
         pattern = r'https://www\.instagram\.com/(?:p|reel)/([A-Za-z0-9_-]+)'
         match = re.match(pattern, url)
         if match:
-            short_code = match.group(1)
+            shortcode = match.group(1)
         else:
             raise ValueError("Invalid Instagram URL")
 
         try:
-            ig_session = await get_instagram_session()
-            if not ig_session:
-                raise BotError(
-                    code=ErrorCode.INTERNAL_ERROR,
-                    message="Instagram: Failed to get session",
-                    url=url,
-                    critical=True,
-                    is_logged=True,
-                )
+            loop = asyncio.get_event_loop()
 
-            variables = {
-                'shortcode': short_code,
-                'child_comment_count': 3,
-                'fetch_comment_count': 40,
-                'parent_comment_count': 24,
-                'has_threaded_comments': True,
-            }
+            L = instaloader.Instaloader()
 
-            params = {
-                'doc_id': '8845758582119845',
-                'variables': json.dumps(variables, separators=(',', ':')),
-            }
+            post = await loop.run_in_executor(
+                self._download_executor,
+                lambda: instaloader.Post.from_shortcode(L.context, shortcode)
+            )
 
-            cookies = ig_session.get("cookies", {})
-
-            headers = {
-                'referer': url,
-                'User-Agent': ig_session["headers"]["user-agent"],
-                'x-csrftoken': cookies.get("csrftoken", None),
-                'x-ig-app-id': '936619743392459',
-                'x-ig-www-claim': '0',
-                'x-mid': cookies.get("mid", None),
-                'x-requested-with': 'XMLHttpRequest',
-                'x-web-device-id': cookies.get("ig_did", None),
-            }
-
-            cleaned_headers = clean_dict(headers)
-            cleaned_cookies = clean_dict(cookies)
-
-            proxies = load_proxies("proxies.txt")
-
-            proxy = random.choice(proxies) if proxies else None
-
-            async with aiohttp.ClientSession() as session:
-                async with session.get("https://www.instagram.com/graphql/query/", headers=cleaned_headers, proxy=proxy, cookies=cleaned_cookies, params=params) as response:
-                    raw_data = await response.text()
-
-            with open ("temp.json", "w") as f:
-                f.write(raw_data)
-
-            data_json = json.loads(raw_data)
-
-            post_info = data_json['data']['xdt_shortcode_media']
-
-            if post_info is None:
+            if post is None:
                 raise BotError(
                     code=ErrorCode.INVALID_URL,
                     message="Instagram: Post not found",
@@ -152,20 +106,20 @@ class InstagramService(BaseService):
             images = []
             filenames = []
 
-            if post_info["__typename"] == "XDTGraphSidecar":
-                for edge in post_info["edge_sidecar_to_children"]["edges"]:
-                    images.append(edge["node"]["display_url"])
-                    filenames.append(f"{edge['node']['shortcode']}.jpg")
-            elif post_info["__typename"] == "XDTGraphImage":
-                images.append(post_info["display_url"])
-                filenames.append(f"{short_code}.jpg")
-            elif post_info["__typename"] == "XDTGraphVideo":
-                images.append(post_info["video_url"])
-                filenames.append(f"{short_code}.mp4")
+            if post.typename == 'GraphSidecar':
+                for i, node in enumerate(post.get_sidecar_nodes(), start=1):
+                    images.append(node.display_url)
+                    filenames.append(f"{i}_{shortcode}.jpg")
+            elif post.typename == 'GraphImage':
+                images.append(post.url)
+                filenames.append(f"{shortcode}.jpg")
+            elif post.typename == 'GraphVideo':
+                images.append(post.video_url)
+                filenames.append(f"{shortcode}.mp4")
             else:
                 raise BotError(
                     code=ErrorCode.INTERNAL_ERROR,
-                    message=f"Unknown post type: {post_info['__typename']}",
+                    message=f"Unknown post type: {post.typename}",
                     url=url,
                     critical=False,
                     is_logged=True,
@@ -177,7 +131,7 @@ class InstagramService(BaseService):
         except Exception as e:
             raise BotError(
                 code=ErrorCode.DOWNLOAD_FAILED,
-                message=f"Instagram: {e.with_traceback}",
+                message=f"Instagram: {e}",
                 url=url,
                 critical=True,
                 is_logged=True,
