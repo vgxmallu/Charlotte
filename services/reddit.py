@@ -38,6 +38,8 @@ class RedditService(BaseService):
     async def download(self, url: str) -> List[MediaContent]:
         result = []
         image_urls = []
+        title = None
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=self.headers, allow_redirects=True) as response:
@@ -53,6 +55,15 @@ class RedditService(BaseService):
                         )
 
             soup = BeautifulSoup(page_content, 'html.parser')
+
+            post_info = soup.find('shreddit-post')
+
+            if post_info:
+                author = post_info.get('author') or 'N/A'
+                subreddit = post_info.get('subreddit-name') or 'N/A'
+                post_title = post_info.get('post-title') or 'N/A'
+                title = f"{author} on r/{subreddit} - {post_title}"
+
             carousel = soup.select_one('gallery-carousel')
             img_tag = soup.select_one('.zoomable-img-wrapper img')
             if carousel:
@@ -91,6 +102,7 @@ class RedditService(BaseService):
                     MediaContent(
                         type=MediaType.PHOTO,
                         path=Path(filename),
+                        title = title,
                     )
                 )
 
