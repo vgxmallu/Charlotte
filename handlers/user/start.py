@@ -27,7 +27,8 @@ async def start_command(message: Message, state: FSMContext):
                 "Nice to meet you, {name}!\n\n"
                 "I'm Charlotte - my hobby is pirating content from various resources.\n\n"
                 "Use _/help_ for more info on me, commands and everything!\n\n"
-                "If something doesn't work, email @jellyfrogirl, or better yet if you send a link to what didn't download🧡"
+                "If something doesn't work, email @jellytyan, or better yet if you send a link to what didn't download🧡\n\n"
+                "P.S.: There is Charlotte Basement, where is posted new updates or service status @charlottesbasement"
             ).format(name=message.from_user.first_name),
             parse_mode=ParseMode.MARKDOWN,
         )

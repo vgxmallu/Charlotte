@@ -31,6 +31,7 @@ If you like this repository, feel free to leave a star ⭐ to motivate me improv
 - [x] Instagram
 - [x] Pixiv
 - [x] X (Twitter)
+- [x] Reddit
 - [x] BiliBili
 - [x] TikTok
 
