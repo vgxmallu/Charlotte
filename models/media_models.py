@@ -20,3 +20,4 @@ class MediaContent():
     title: Optional[str] = None
     cover: Optional[Path] = None
     performer: Optional[str] = None
+    original_size: Optional[bool] = None

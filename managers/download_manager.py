@@ -61,7 +61,7 @@ class MediaHandler:
                     animation=types.FSInputFile(gif.path), disable_notification=True
                 )
 
-                await delete_files(gif.path)
+                await delete_files([gif.path])
         except Exception as e:
             if not isinstance(e, BotError):
                 e = BotError(
@@ -81,7 +81,9 @@ class MediaHandler:
             return
 
         try:
-        # Split media items into groups of 10
+            media_to_send_as_document: List[MediaContent] = []
+
+            # Split media items into groups of 10
             for i in range(0, len(content), 10):
                 media_group = MediaGroupBuilder()
                 if caption and i == 0:
@@ -105,12 +107,23 @@ class MediaHandler:
                         )
                     temp_media_path.append(item.path)
 
+                    if item.original_size:
+                        media_to_send_as_document.append(item)
+
                 if group_items:
                     await bot.send_chat_action(message.chat.id, "upload_video")
                     await message.answer_media_group(
                         media=media_group.build(), disable_notification=True
                     )
                     await asyncio.sleep(1)
+
+            for item in media_to_send_as_document:
+                await bot.send_chat_action(message.chat.id, "upload_document")
+                await message.answer_document(
+                    document=types.FSInputFile(item.path),
+                    disable_notification=True
+                )
+                await asyncio.sleep(0.5)
 
         except Exception as e:
             if not isinstance(e, BotError):

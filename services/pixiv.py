@@ -18,11 +18,12 @@ ua = UserAgent(platforms="desktop")
 class PixivService(BaseService):
     name = "Pixiv"
 
-    def __init__(self, output_path: str = "other/downloadsTemp"):
+    def __init__(self, output_path: str = "other/downloadsTemp/"):
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
         self.user_agent = ua.random
         self.headers = {
+            'accept': 'application/json',
             "Referer": "https://www.pixiv.net/",
             "User-Agent": self.user_agent,
         }
@@ -37,37 +38,35 @@ class PixivService(BaseService):
 
     async def download(self, url: str) -> List[MediaContent]:
         result = []
+        match = re.search(r'pixiv\.net/.*/artworks/(\d+)$', url)
 
-        image_url_pattern = re.compile(
-            r"https://i\.pximg\.net/img-original/img/\d{4}/\d{2}/\d{2}/\d{2}/\d{2}/\d{2}/\d{9}_p0\.png"
-        )
+        if match:
+            pixiv_id = match.group(1)
+        else:
+            raise BotError(
+                code=ErrorCode.INVALID_URL,
+                message="Invalid Pixiv URL",
+                url=url,
+                critical=False,
+                is_logged=True,
+            )
 
         try:
-            match = re.search(r"artworks/(\d+)", url)
-            if match is None:
-                raise BotError(
-                    code=ErrorCode.INVALID_URL,
-                    message="Invalid Pixiv URL",
-                    url=url,
-                    critical=False,
-                    is_logged=True,
-                )
-
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=self.headers, allow_redirects=True) as response:
+                async with session.get(f"https://www.pixiv.net/ajax/illust/{pixiv_id}/pages", headers=self.headers) as response:
                     if response.status == 200:
-                        page_content = await response.text()
-                        image_urls = image_url_pattern.findall(page_content)
+                        page_response_json = await response.json()
                     else:
                         raise BotError(
-                            code=ErrorCode.DOWNLOAD_FAILED,
-                            message="Failed to retrieve Pixiv page",
+                            code=ErrorCode.INVALID_URL,
+                            message="Failed to retrieve Pixiv pages info",
                             url=url,
                             critical=False,
                             is_logged=True,
                         )
+            for img in page_response_json["body"]:
+                img_url=img["urls"]["original"]
 
-            for img_url in image_urls:
                 filename = self.output_path + img_url.split("/")[-1]
                 await self._download_photo(img_url, filename)
 
@@ -75,6 +74,7 @@ class PixivService(BaseService):
                     MediaContent(
                         type=MediaType.PHOTO,
                         path=Path(filename),
+                        original_size=True,
                     )
                 )
 
@@ -93,16 +93,14 @@ class PixivService(BaseService):
 
     async def _download_photo(self, url: str, filename: str) -> None:
         retries = 3
-        for attempt in range(retries):
-            try:
-                async with aiohttp.ClientSession() as session:
+        connector = aiohttp.TCPConnector(force_close=True)
+        async with aiohttp.ClientSession(connector=connector) as session:
+            for attempt in range(retries):
+                try:
                     async with session.get(url, headers=self.headers) as response:
                         if response.status == 200:
                             async with aiofiles.open(filename, "wb") as f:
-                                while True:
-                                    chunk = await response.content.read(1024)
-                                    if not chunk:
-                                        break
+                                async for chunk in response.content.iter_chunked(1024):
                                     await f.write(chunk)
                             break
                         else:
@@ -113,8 +111,8 @@ class PixivService(BaseService):
                                 critical=False,
                                 is_logged=True,
                             )
-            except Exception:
-                if attempt < retries - 1:
-                    await asyncio.sleep(0.5)
-                else:
-                    raise
+                except Exception:
+                    if attempt < retries - 1:
+                        await asyncio.sleep(0.5)
+                    else:
+                        raise

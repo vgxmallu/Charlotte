@@ -102,6 +102,7 @@ class PinterestService(BaseService):
                         type=MediaType.PHOTO,
                         path=Path(filename),
                         title=post_dict["title"],
+                        original_size=True
                     ))
             else:
                 raise BotError(
