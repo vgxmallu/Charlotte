@@ -76,6 +76,10 @@ class UrlFilter(BaseFilter):
                         r"https:\/\/www\.pixiv\.net\/(?:[a-z]{2}\/)?artworks\/\d+",
                         message.text,
                     ),
+                    re.match(
+                        r"https:\/\/www\.reddit\.com\/r\/[A-Za-z0-9_]+\/(?:comments\/[A-Za-z0-9]+(?:\/[^\/\s?]+)?|s\/[A-Za-z0-9]+)(?:\?[^\s]*)?", 
+                        message.text
+                    ),
                 ]
             )
         else:
