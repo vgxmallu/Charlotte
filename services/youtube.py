@@ -275,15 +275,66 @@ class YouTubeService(BaseService):
                 return False, None
         except Exception as e:
             if isinstance(e, yt_dlp.utils.DownloadError):
-                if "Private video" in str(e):
+                error_msg = str(e).lower()
+
+                if "private video" in error_msg or "this video is private" in error_msg:
                     raise BotError(
                         code=ErrorCode.INVALID_URL,
-                        message="Vide Private",
+                        message="Video is private",
                         url=url,
                         critical=False,
                         is_logged=False
                     )
-            return (False, None)
+                elif "sign in to confirm your age" in error_msg or "age-restricted" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video is age-restricted",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
+                elif "video unavailable" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video is unavailable",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
+                elif "this video is no longer available" in error_msg or "has been removed" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video has been removed",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
+                elif "unavailable in your country" in error_msg or "not available in your country" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video is geo-blocked",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
+                elif "no video formats" in error_msg or "requested format not available" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message="No suitable video format found",
+                        url=url,
+                        critical=True,
+                        is_logged=True
+                    )
+                else:
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message=f"yt-dlp error: {str(e)}",
+                        url=url,
+                        critical=True,
+                        is_logged=True
+                    )
+            else:
+                return False, None
 
 
     async def _check_audio_size(self, url: str, max_size_mb: int =50) -> Tuple[bool, Union[str, None]]:
@@ -313,6 +364,14 @@ class YouTubeService(BaseService):
                     self._download_executor,
                     lambda: ydl.extract_info(url, download=False)
                 )
+                if not info_dict or not info_dict.get("formats"):
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video is unavailable or private",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
 
             if not info_dict:
                 return False, None
@@ -323,5 +382,67 @@ class YouTubeService(BaseService):
                 return True, best_format
             else:
                 return False, None
-        except Exception:
-            return (False, None)
+        except BotError as e:
+            raise e
+        except Exception as e:
+            if isinstance(e, yt_dlp.utils.DownloadError):
+                error_msg = str(e).lower()
+
+                if "private video" in error_msg or "this video is private" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video is private",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
+                elif "sign in to confirm your age" in error_msg or "age-restricted" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video is age-restricted",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
+                elif "video unavailable" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video is unavailable",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
+                elif "this video is no longer available" in error_msg or "has been removed" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video has been removed",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
+                elif "unavailable in your country" in error_msg or "not available in your country" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.INVALID_URL,
+                        message="Video is geo-blocked",
+                        url=url,
+                        critical=False,
+                        is_logged=False
+                    )
+                elif "no video formats" in error_msg or "requested format not available" in error_msg:
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message="No suitable video format found",
+                        url=url,
+                        critical=True,
+                        is_logged=True
+                    )
+                else:
+                    raise BotError(
+                        code=ErrorCode.DOWNLOAD_FAILED,
+                        message=f"yt-dlp error: {str(e)}",
+                        url=url,
+                        critical=True,
+                        is_logged=True
+                    )
+            else:
+                return False, None
