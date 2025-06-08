@@ -4,6 +4,8 @@ import re
 from pathlib import Path
 from typing import List
 from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor
+import yt_dlp
 
 import aiofiles
 import aiohttp
@@ -18,6 +20,7 @@ ua = UserAgent(platforms="desktop")
 
 class RedditService(BaseService):
     name = "Reddit"
+    _download_executor = ThreadPoolExecutor(max_workers=5)
 
     def __init__(self, output_path: str = "other/downloadsTemp"):
         self.output_path = output_path
@@ -25,6 +28,10 @@ class RedditService(BaseService):
         self.user_agent = ua.random
         self.headers = {
             "User-Agent": self.user_agent,
+        }
+        self.yt_dlp_opts = {
+            "outtmpl": f"{self.output_path}/%(id)s_{yt_dlp.utils.sanitize_filename('%(title)s')}.%(ext)s",
+            "quiet": True,
         }
 
     def is_supported(self, url: str) -> bool:
@@ -39,6 +46,7 @@ class RedditService(BaseService):
         result = []
         image_urls = []
         title = None
+        media_type = None
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -62,21 +70,15 @@ class RedditService(BaseService):
                 author = post_info.get('author') or 'N/A'
                 subreddit = post_info.get('subreddit-name') or 'N/A'
                 post_title = post_info.get('post-title') or 'N/A'
+                media_type = post_info.get('post-type') or None
                 title = f"{author} on r/{subreddit} - {post_title}"
 
-            carousel = soup.select_one('gallery-carousel')
-            img_tag = soup.select_one('.zoomable-img-wrapper img')
-            if carousel:
-                for li in carousel.select('li'):
-                    img_tag = li.select_one('figure img')
-                    if img_tag:
-                        src = img_tag.get('src') or img_tag.get('data-lazy-src')
-                        if src:
-                            image_urls.append(src)
-            elif img_tag:
-                src = img_tag.get('src') or img_tag.get('data-lazy-src')
-                if src:
-                    image_urls.append(src)
+            if media_type == 'image':
+                img_tag = soup.select_one('.zoomable-img-wrapper img')
+                if img_tag:
+                    src = img_tag.get('src') or img_tag.get('data-lazy-src')
+                    if src:
+                        image_urls.append(src)
                 else:
                     raise BotError(
                         code=ErrorCode.DOWNLOAD_FAILED,
@@ -85,13 +87,51 @@ class RedditService(BaseService):
                         critical=False,
                         is_logged=True,
                     )
+            elif media_type == 'video':
+                with yt_dlp.YoutubeDL(self.yt_dlp_opts) as ydl:
+                    loop = asyncio.get_event_loop()
+
+                    info_dict = await loop.run_in_executor(
+                        self._download_executor,
+                        lambda: ydl.extract_info(url, download=False)
+                    )
+
+                    if not info_dict:
+                        raise BotError(
+                            code=ErrorCode.DOWNLOAD_FAILED,
+                            message="Failed to get video info",
+                            url=url,
+                            critical=True,
+                            is_logged=True
+                        )
+
+                    await loop.run_in_executor(
+                        self._download_executor,
+                        lambda: ydl.download([url])
+                    )
+
+                    return [
+                        MediaContent(
+                            type=MediaType.VIDEO,
+                            path=Path(ydl.prepare_filename(info_dict)),
+                            title=title,
+                        )
+                    ]
+            elif media_type == 'gallery':
+                carousel = soup.select_one('gallery-carousel')
+                for li in carousel.select('li'):
+                    img_tag = li.select_one('figure img')
+                    if img_tag:
+                        src = img_tag.get('src') or img_tag.get('data-lazy-src')
+                        if src:
+                            image_urls.append(src)
             else:
                 raise BotError(
-                    code=ErrorCode.DOWNLOAD_FAILED,
-                    message="No images found on the Reddit page",
+                    code=ErrorCode.INVALID_URL,
+                    message="No media found on the Reddit page",
                     url=url,
                     critical=False,
-                    is_logged=True,
+                    is_logged=False,
                 )
 
             for img_url in image_urls:
