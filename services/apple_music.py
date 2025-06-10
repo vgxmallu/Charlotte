@@ -14,6 +14,7 @@ from aiofiles import os as aios
 from bs4 import BeautifulSoup
 from yt_dlp.utils import sanitize_filename
 
+from config.secrets import APPLEMUSIC_DEV_TOKEN
 from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
 from utils import (
@@ -35,11 +36,16 @@ class AppleMusicService(BaseService):
         super().__init__()
         self.output_path = output_path
         os.makedirs(self.output_path, exist_ok=True)
+        self.api_headers = {
+            'accept': '*/*',
+            'authorization': f'Bearer {APPLEMUSIC_DEV_TOKEN}',
+            'origin': 'https://music.apple.com',
+            'referer': 'https://music.apple.com/',
+        }
 
     def _get_audio_options(self):
         return {
             "format": "bestaudio",
-            "writethumbnail": True,
             "outtmpl": f"{self.output_path}/{sanitize_filename('%(title)s')}",
             "cookiefile": random_cookie_file(),
             "postprocessors": [
@@ -162,7 +168,7 @@ class AppleMusicService(BaseService):
             )
 
     async def get_playlist_tracks(self, url: str) -> list[str]:
-        match = re.search(r"playlist/([^/?]+)", url)
+        match = re.search(r'/playlist/[^/]+/(pl\.[\w-]+)', url)
         if not match:
             raise BotError(
                 code=ErrorCode.INVALID_URL,
@@ -175,6 +181,51 @@ class AppleMusicService(BaseService):
         playlist_id = match.group(1)
         logger.info(f"Parsing playlist with ID: {playlist_id}")
 
+        # --- Attempt to use API first if token is available ---
+        if APPLEMUSIC_DEV_TOKEN:
+            logger.info(f"Attempting to fetch playlist {playlist_id} using Apple Music API.")
+            try:
+                params = {
+                    'fields[songs]': 'name,artistName,artwork,url',
+                }
+                api_url = f'https://amp-api.music.apple.com/v1/catalog/tr/playlists/{playlist_id}'
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(api_url, headers=self.api_headers, params=params) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if (data and 'data' in data and len(data['data']) > 0 and
+                                    'relationships' in data['data'][0] and
+                                    'tracks' in data['data'][0]['relationships'] and
+                                    'data' in data['data'][0]['relationships']['tracks']):
+
+                                track_urls: list[str] = []
+                                tracks_data = data['data'][0]['relationships']['tracks']['data']
+                                for track in tracks_data:
+                                    if "attributes" in track and "url" in track["attributes"]:
+                                        track_urls.append(track["attributes"]["url"])
+                                    else:
+                                        logger.warning(f"Skipping track in API response due to missing attributes/url: {track}")
+
+                                if track_urls:
+                                    logger.info(f"Successfully fetched {len(track_urls)} tracks from API for playlist {playlist_id}.")
+                                    return track_urls
+                                else:
+                                    logger.warning(f"API returned no tracks or invalid track data for playlist {playlist_id}. Falling back to HTML parsing.")
+                            else:
+                                logger.warning(f"Unexpected API response structure for playlist {playlist_id}. Falling back to HTML parsing.")
+                        else:
+                            logger.error(f"API request failed with status {response.status} for playlist {playlist_id}. Falling back to HTML parsing.")
+
+            except aiohttp.ClientError as e:
+                logger.error(f"Apple Music API request error for playlist {playlist_id}: {e}. Falling back to HTML parsing.")
+            except KeyError as e:
+                logger.error(f"KeyError in Apple Music API playlist response parsing for {playlist_id}: {e}. Falling back to HTML parsing.")
+            except Exception as e:
+                logger.error(f"General error during Apple Music API attempt for playlist {playlist_id}: {e}. Falling back to HTML parsing.")
+
+        # --- Fallback to HTML parsing ---
+        logger.info(f"Falling back to HTML parsing for playlist {playlist_id}.")
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
@@ -183,13 +234,13 @@ class AppleMusicService(BaseService):
                     soup = BeautifulSoup(await response.text(), 'html.parser')
 
                     script_tag = soup.find('script', {'id': 'serialized-server-data'})
-                    if not isinstance(script_tag, str):
-                        logger.error("Не удалось найти JSON в странице.")
+                    if not script_tag or not script_tag.string:
+                        logger.error(f"Could not find JSON in page for playlist {playlist_id} (serialized-server-data script tag missing or empty).")
                         return []
 
                     json_data = json.loads(script_tag.string)
 
-                    track_urls = []
+                    track_urls: list[str] = []
 
                     sections = json_data[0].get('data', {}).get('sections', [])
                     for section in sections:
@@ -197,33 +248,60 @@ class AppleMusicService(BaseService):
                             tracks = section.get('items', [])
                             for track in tracks:
                                 try:
-                                    track_id = track["id"]
-                                    match = re.search(r" - (\d+)$", track_id)
-                                    if match:
-                                        track_id_extracted = match.group(1)
-                                        track_urls.append("https://music.apple.com/pl/song/"+track_id_extracted)
-                                except (KeyError, IndexError):
-                                    logger.warning(f"Не удалось извлечь URL для трека: {track}")
+                                    track_id_raw = track.get("id")
+                                    numerical_track_id = None
 
+                                    if isinstance(track_id_raw, str):
+                                        id_match = re.search(r'(\d+)$', track_id_raw)
+                                        if id_match:
+                                            numerical_track_id = id_match.group(1)
+                                        else:
+                                            if track_id_raw.isdigit():
+                                                numerical_track_id = track_id_raw
+                                    elif isinstance(track_id_raw, (int, float)):
+                                        numerical_track_id = str(int(track_id_raw))
+
+                                    if numerical_track_id:
+                                        track_urls.append("https://music.apple.com/pl/song/"+numerical_track_id)
+                                    else:
+                                        logger.warning(f"Could not extract numerical track ID for: {track}")
+
+                                except (KeyError, IndexError) as e:
+                                    logger.warning(f"Failed to extract URL for track from HTML (KeyError/IndexError): {track}. Error: {e}")
+                                except Exception as e:
+                                    logger.warning(f"An unexpected error occurred during HTML track extraction: {track}. Error: {e}")
                             break
 
+                    if not track_urls:
+                        logger.warning(f"No tracks found after HTML parsing for playlist {playlist_id}.")
+                    else:
+                        logger.info(f"Successfully parsed {len(track_urls)} tracks from HTML for playlist {playlist_id}.")
                     return track_urls
 
         except aiohttp.ClientError as e:
+            logger.error(f"Failed to fetch playlist HTML: {e}")
             raise BotError(
                 code=ErrorCode.INTERNAL_ERROR,
-                message=f"Failed to fetch playlist: {e}",
+                message=f"Failed to fetch playlist data from HTML: {e}",
                 url=url,
                 critical=True,
                 is_logged=True,
             )
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON from HTML for playlist {playlist_id}: {e}")
             raise BotError(
                 code=ErrorCode.INTERNAL_ERROR,
-                message="Failed to parse playlist data",
+                message=f"Failed to parse playlist data from HTML (JSON error): {e}",
                 url=url,
                 critical=True,
                 is_logged=True,
             )
-
-        return []
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during HTML playlist parsing: {e}")
+            raise BotError(
+                code=ErrorCode.INTERNAL_ERROR,
+                message=f"An unexpected error occurred during HTML playlist parsing: {e}",
+                url=url,
+                critical=True,
+                is_logged=True,
+            )
