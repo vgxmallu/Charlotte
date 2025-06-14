@@ -7,12 +7,18 @@ from logging.handlers import TimedRotatingFileHandler
 
 from database.database_manager import create_table_settings
 from loader import bot, dp
-from utils.language_middleware import CustomMiddleware, i18n
+from utils.language_middleware import CustomI18nMiddleware
+from aiogram.utils.i18n import I18n, FSMI18nMiddleware
 from utils.register_services import initialize_services
 from utils.set_bot_commands import set_default_commands
 
 # Initialize CustomMiddleware and connect it to dispatcher
-CustomMiddleware(i18n=i18n).setup_dp(dp)
+i18n = I18n(path="locales", default_locale="en", domain="messages")
+fsm_i18n = FSMI18nMiddleware(i18n)
+dp.update.middleware(fsm_i18n)
+
+custom_i18n = CustomI18nMiddleware(i18n)
+dp.update.middleware(custom_i18n)
 
 # Setup Logger
 log_dir = "other/logs"
@@ -21,24 +27,24 @@ os.makedirs(log_dir, exist_ok=True)
 log_format = "%(asctime)s - %(filename)s - %(funcName)s - %(lineno)d - %(name)s - %(levelname)s - %(message)s"
 log_file = os.path.join(log_dir, "logging.log")
 
-# Файл для логирования с ротацией
+# File to log with rotation
 file_handler = TimedRotatingFileHandler(
     log_file, when="midnight", interval=1, backupCount=7, encoding="utf-8"
 )
 file_handler.setFormatter(logging.Formatter(log_format))
 
-# Консольный обработчик без цветов
+# Console Handler
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(logging.Formatter(log_format))
 
-# Установка логирования
+# Setup logging
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)  # Устанавливаем уровень на INFO
+logger.setLevel(logging.INFO)
 
-# Проверим, не добавлен ли уже обработчик для консоли
+# Add logger handler to console and file
 if not logger.hasHandlers():
-    logger.addHandler(file_handler)  # Для записи в файл
-    logger.addHandler(console_handler)  # Для вывода в консоль
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
 
 # Bot Startup
 async def main():

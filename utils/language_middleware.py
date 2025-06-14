@@ -1,67 +1,46 @@
+from aiogram import BaseMiddleware
+from aiogram.types import TelegramObject
 from aiogram.fsm.context import FSMContext
-from aiogram.utils.i18n import FSMI18nMiddleware, I18n, I18nMiddleware
+from aiogram.utils.i18n import I18n, FSMI18nMiddleware
+from typing import Callable, Dict, Any
 
 from database.database_manager import SQLiteDatabaseManager
 
 
-i18n = I18n(path="locales", default_locale="en", domain="messages")
-i18n_middleware = FSMI18nMiddleware(i18n)
-
-
-class CustomMiddleware(I18nMiddleware):
+class CustomI18nMiddleware(BaseMiddleware):
     def __init__(self, i18n: I18n):
         self.i18n = i18n
+        self.fsm_i18n = FSMI18nMiddleware(i18n)
+        self._cache: Dict[int, str] = {}
 
-    async def set_local(self, state: FSMContext, locale: str) -> None:
-        """Set localisation for user state
+    async def __call__(self, handler: Callable, event: TelegramObject, data: Dict[str, Any]):
+        chat_id = None
 
-        Args:
-            state (FSMContext): Message State Object
-            locale (str): Localisation, such as: en, ru, etc.
-        """
-        await i18n_middleware.set_locale(state=state, locale=locale)
+        if hasattr(event, "chat"):
+            chat_id = event.chat.id
+        elif hasattr(event, "message") and hasattr(event.message, "chat"):
+            chat_id = event.message.chat.id
 
-    async def get_locale(self, chat_id: int):
-        """Get localisation from database
+        locale = "en"
+        if chat_id:
+            locale = self._cache.get(chat_id)
+            if not locale:
+                locale = await self._get_chat_language(chat_id)
+                self._cache[chat_id] = locale
 
-        Args:
-            chat_id (int): Chat ID
+        state: FSMContext = data.get("state")
+        if state:
+            await self.fsm_i18n.set_locale(state, locale)
 
-        Returns:
-            str: Localisation, such as: en, ru, etc.
-        """
-        language = await get_chat_language(chat_id)
-        return language
+        return await handler(event, data)
 
-    def setup_dp(self, dp):
-        """Setup i18n middleware for dispatcher
+    async def _get_chat_language(self, chat_id: int) -> str:
+        async with SQLiteDatabaseManager() as cursor:
+            await cursor.execute(
+                "SELECT lang FROM chat_settings WHERE chat_id = ?", (chat_id,)
+            )
+            result = await cursor.fetchone()
+            return result[0] if result else "en"
 
-        Args:
-            dp (Dispatcher): Dispatcher Object
-
-        Returns:
-            i18n: i18n Object
-        """
-        i18n_middleware.setup(dp)
-        return i18n_middleware
-
-
-async def get_chat_language(chat_id: int):
-    """Get chat language from database
-
-    Args:
-        chat_id (int): Chat ID
-
-    Returns:
-        str: Localisation, such as: en, ru, etc. Default is 'en'
-    """
-    async with SQLiteDatabaseManager() as cursor:
-        await cursor.execute(
-            "SELECT lang FROM chat_settings WHERE chat_id = ?", (chat_id,)
-        )
-        result = await cursor.fetchone()
-
-        if result:
-            return result[0]
-        else:
-            return "en"
+    def clear_cache(self, chat_id: int):
+        self._cache.pop(chat_id, None)

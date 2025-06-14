@@ -11,7 +11,6 @@ from .spotify_login import get_access_token
 
 #  Work with language
 from .google_translate import translate_text
-from .language_middleware import get_chat_language
 
 #  Bot utils
 from .set_bot_commands import set_default_commands
@@ -31,7 +30,6 @@ __all__ = [
     "translate_text",
     "is_image_or_video",
     "search_music",
-    "get_chat_language",
     "set_default_commands",
     "update_metadata",
     "random_emoji",

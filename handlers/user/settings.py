@@ -13,7 +13,8 @@ from aiogram.utils.i18n import gettext as _
 
 from filters.settings_filter import EmojiTextFilter
 from functions.db import db_change_lang
-from utils.language_middleware import CustomMiddleware, i18n
+from main import custom_i18n
+from utils.language_middleware import CustomI18nMiddleware
 from loader import dp
 
 
@@ -56,7 +57,10 @@ async def settings_command(message: Message, state: FSMContext) -> None:
 async def process_settings_english(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "en")
-    await CustomMiddleware(i18n=i18n).set_local(state=state, locale="en")
+
+    # Сбрасываем кэш языка в middleware
+    custom_i18n.clear_cache(message.chat.id)
+
     await message.answer(
         "Your language has been changed to English", reply_markup=ReplyKeyboardRemove()
     )
@@ -66,7 +70,9 @@ async def process_settings_english(message: Message, state: FSMContext) -> None:
 async def process_settings_russian(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "ru")
-    await CustomMiddleware(i18n=i18n).set_local(state=state, locale="ru")
+    
+    custom_i18n.clear_cache(message.chat.id)
+    
     await message.answer(
         "Ваш язык сменён на русский", reply_markup=ReplyKeyboardRemove()
     )
@@ -76,7 +82,9 @@ async def process_settings_russian(message: Message, state: FSMContext) -> None:
 async def process_settings_ukrainian(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "uk")
-    await CustomMiddleware(i18n=i18n).set_local(state=state, locale="uk")
+    
+    custom_i18n.clear_cache(message.chat.id)
+    
     await message.answer(
         "Ваша мова зміннена на українську", reply_markup=ReplyKeyboardRemove()
     )
@@ -86,7 +94,9 @@ async def process_settings_ukrainian(message: Message, state: FSMContext) -> Non
 async def process_settings_polish(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "pl")
-    await CustomMiddleware(i18n=i18n).set_local(state=state, locale="pl")
+    
+    custom_i18n.clear_cache(message.chat.id)
+    
     await message.answer(
         "Twój język został zmieniony na Polski", reply_markup=ReplyKeyboardRemove()
     )

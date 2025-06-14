@@ -8,7 +8,6 @@ from aiogram.utils.i18n import gettext as _
 
 from functions.db import db_add_chat
 from loader import dp
-from utils.language_middleware import CustomMiddleware, i18n
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +16,6 @@ logger = logging.getLogger(__name__)
 async def start_command(message: Message, state: FSMContext):
     try:
         await db_add_chat(chat_id=message.chat.id, locale="en", anonime_statistic=0)
-
-        locale = await CustomMiddleware(i18n=i18n).get_locale(chat_id=message.chat.id)
-        await CustomMiddleware(i18n=i18n).set_local(state=state, locale=locale)
 
         await message.answer(
             _(
