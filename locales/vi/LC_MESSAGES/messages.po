@@ -1,0 +1,227 @@
+# Vietnamese translations for Charlotte.
+# Copyright (C) 2025 JellyTyan
+# This file is distributed under the same license as the Charlotte project.
+# JellyTyan lycomilopster@gmail.com, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Version\n"
+"Report-Msgid-Bugs-To: lycomilopster@gmail.com\n"
+"POT-Creation-Date: 2025-06-08 14:39+0200\n"
+"PO-Revision-Date: 2025-06-14 11:58+0200\n"
+"Last-Translator: JellyTyan\n"
+"Language-Team: en lycomilopster@gmail.com\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Generated-By: Babel 2.13.0\n"
+"X-Generator: Poedit 3.5\n"
+
+#: handlers/admin/news.py:42
+msgid "Send a message with the news"
+msgstr "📢 Gửi tin tức ngay!"
+
+#: handlers/admin/news.py:74
+msgid "Mailing list started"
+msgstr "📬 Bắt đầu gửi mail!"
+
+#: handlers/admin/news.py:113
+msgid ""
+"The mailing has been completed\n"
+"Beginning at {start_time}\n"
+"Ended at {end_time}\n"
+"Number of chats: {total_chat}\n"
+"Successfully sent: {sucсess_send}\n"
+"erros: {error_send}"
+msgstr ""
+"✅ Quá trình gửi mail đã hoàn tất\n"
+"Bắt đầu lúc {start_time}\n"
+"Kết thúc lúc {end_time}\n"
+"Số lượng chat: {total_chat}\n"
+"Gửi thành công: {sucсess_send}\n"
+"Lỗi: {error_send}"
+
+#: handlers/user/help.py:18
+msgid ""
+"<b>Hey, {name}! I'm here to help you</b>\n"
+"\n"
+"Here are the main commands:\n"
+"  /start – Start using the bot\n"
+"  /help – Show this help message\n"
+"  /settings – Bot settings\n"
+"  /support – Support my creator\n"
+"\n"
+"I can download media from a wide range of platforms.\n"
+"Here's what I support:\n"
+"\n"
+"<b>Music Platforms</b>\n"
+"  - Spotify\n"
+"  - Apple Music\n"
+"  - SoundCloud\n"
+"    I’ll fetch the music, with title, artist, and cover.\n"
+"\n"
+"<b>Video Platforms</b>\n"
+"  - YouTube – Videos, Shorts, or just audio (up to 50 MB)\n"
+"  - TikTok – Videos and images\n"
+"  - BiliBili – Full video support (with limitations)\n"
+"  - Instagram – Reels and posts\n"
+"  - Twitter – Videos and images\n"
+"  - Reddit – Media from posts\n"
+"\n"
+"<b>Art Platforms</b>\n"
+"  - Pixiv – I can download illustrations for you\n"
+"\n"
+"  - Pinterest – I can download all media for you\n"
+"Just send a link — and I’ll take care of the rest."
+msgstr ""
+"Xin chào, {name}! Mình ở đây để giúp bạn 🌟\n"
+"\n"
+"Đây là những lệnh chính:\n"
+"/start – Bắt đầu sử dụng bot\n"
+"/help – Hiển thị hướng dẫn này\n"
+"/settings – Cài đặt bot\n"
+"/support – Ủng hộ tác giả 💖\n"
+...
+"I can download media from a bunch of platforms!\n"
+...
+msgstr ""
+"Mình có thể tải media từ rất nhiều nền tảng!\n"
+"\n"
+"🎵 Nền tảng âm nhạc\n"
+"  • Spotify\n"
+"  • Apple Music\n"
+"  • SoundCloud\n"
+"Mình sẽ tải nhạc kèm tiêu đề, nghệ sĩ và bìa 🎧\n"
+"\n"
+"🎬 Nền tảng video\n"
+"  • YouTube – Video, Shorts hoặc chỉ audio (tối đa 50 MB)\n"
+"  • TikTok – Video và hình ảnh\n"
+"  • BiliBili – Hỗ trợ tải video đầy đủ (có một số hạn chế)\n"
+"  • Instagram – Reels và bài đăng\n"
+"  • Twitter – Video và hình ảnh\n"
+"  • Reddit – Media từ bài đăng\n"
+"\n"
+"🎨 Nền tảng nghệ thuật\n"
+"  • Pixiv – Tải tranh minh họa cho bạn ✨\n"
+"  • Pinterest – Mình có thể tải tất cả media cho bạn!\n"
+"\n"
+"Chỉ cần gửi link — mình lo phần còn lại 💌"
+
+#: handlers/user/help.py:56
+msgid "Your download has been cancelled."
+msgstr "🚫 Ưu lại! Việc tải đã bị huỷ bỏ rồi!"
+
+#: handlers/user/help.py:58
+msgid "No active download task found to cancel."
+msgstr "🌸 Không tìm thấy tác vụ tải nào để huỷ. Mà đừng lo, mình luôn sẵn sàng nếu bạn cần!"
+
+#: handlers/user/settings.py:33
+msgid "You have no rights to edit these settings!"
+msgstr "🙅‍♀️ Ối! Bạn không có quyền chỉnh sửa cài đặt này. Nếu bạn là quản trị viên, hãy bật quyền và thử lại nhé."
+
+#: handlers/user/settings.py:52
+msgid "Pick a language!"
+msgstr "🌍 Chọn một ngôn ngữ nào!"
+
+#: handlers/user/settings.py:107 handlers/user/settings.py:118
+msgid "Canceled!"
+msgstr "💔 Đã huỷ! Nếu bạn nhầm, mình luôn sẵn sàng trợ giúp!"
+
+#: handlers/user/start.py:21
+msgid ""
+"Henlooooooooooooooooooooooooooooooooooooooooooooooo\n"
+"\n"
+"Nice to meet you, {name}!\n"
+"\n"
+"I'm Charlotte - my hobby is pirating content from various resources.\n"
+"\n"
+"Use _/help_ for more info on me, commands and everything!\n"
+"\n"
+"If something doesn't work, email @jellytyan, or better yet if you send a "
+"link to what didn't download🧡\n"
+"\n"
+"P.S.: There is Charlotte Basement, where is posted new updates or service"
+" status @charlottesbasement"
+msgstr ""
+"Henlooooooooooooooooooooooooo~ 💫\n"
+"\n"
+"Rất vui được gặp bạn, {name}! 💚\n"
+"\n"
+"Mình là Charlotte – sở thích là tải nội dung từ nhiều nơi! 🏴‍☠️📥\n"
+"\n"
+"Dùng /help để tìm hiểu thêm về mình, các lệnh và những thứ mình làm được! ✨\n"
+"\n"
+"Nếu có gì không ổn — nhắn @jellytyan,\n"
+"hoặc tốt hơn là gửi link không tải được 🧡\n"
+"\n"
+"P.S.: Có một kênh Charlotte Basement để cập nhật và tình trạng dịch vụ: @charlottesbasement 🔧📢"
+
+#: handlers/user/support.py:12
+msgid ""
+"After some thought, I dare to leave a link to support the project. If you"
+" have a desire to improve the work of Charlotte, please follow this link."
+" Every dollar helps keep Charlotte on a quality server just for you. You "
+"are not obligated to pay. Only if you have the desire!!!!\n"
+" https://buymeacoffee.com/jellytyan \n"
+" https://ko-fi.com/jellytyan"
+msgstr ""
+"Sau một hồi suy nghĩ… mình quyết định để lại link ủng hộ nhỏ 🌸\n"
+"Nếu bạn muốn giúp cải thiện Charlotte, xin mời dùng các link dưới!\n"
+"Mỗi đô la giúp Charlotte chạy trên server tốt hơn – chỉ dành cho bạn ☁️💚\n"
+"Tất nhiên, bạn không bị bắt buộc. Chỉ khi bạn muốn thôi!!! 💖\n"
+"\n"
+"https://buymeacoffee.com/jellytyan\n"
+"https://ko-fi.com/jellytyan"
+
+#: handlers/user/url.py:40
+msgid "Video"
+msgstr "🎥 Video"
+
+#: handlers/user/url.py:41
+msgid "Audio"
+msgstr "🎶 Audio"
+
+#: handlers/user/url.py:44
+msgid "Choose a format to download:"
+msgstr "✨ Chọn định dạng để tải về:"
+
+#: handlers/user/url.py:69
+msgid "The selection format is only available for YouTube."
+msgstr "🌸 Định dạng lựa chọn chỉ dành cho YouTube. 😊"
+
+#: handlers/user/url.py:143
+msgid "Download completed."
+msgstr "🎉 Tải xong rồi! Nếu bạn cần gì khác, cứ nói nhé! 💖"
+
+#: utils/error_handler.py:37
+msgid ""
+"I'm sorry. You may have provided a corrupted link, private content or 18+"
+" content 🤯"
+msgstr "Xin lỗi nhé. Có thể bạn đã cung cấp link hỏng, nội dung riêng tư hoặc nội dung 18+ 🤯"
+
+#: utils/error_handler.py:39
+msgid "Critical error #022 - media file is too large"
+msgstr "⚠️ Lỗi nghiêm trọng #022 – file media quá lớn."
+
+#: utils/error_handler.py:41
+msgid "Wow, you tried to download too heavy media. Don't do this, pleeease 😭"
+msgstr "Ôi, bạn đang cố tải nội dung quá nặng. Đừng làm vậy nữa nhé, làm ơn 😭"
+
+#: utils/error_handler.py:43
+msgid "Sorry, I couldn't download the media."
+msgstr "😢 Xin lỗi, mình không thể tải nội dung này."
+
+#: utils/error_handler.py:45
+msgid "Download canceled."
+msgstr "💔 Đã huỷ tải. Nếu bạn nhầm, mình luôn sẵn sàng giúp!"
+
+#: utils/error_handler.py:47
+msgid "Get playlist items error"
+msgstr "🚫 Có lỗi khi lấy danh sách phát. Hãy thử lại sau nhé!"
+
+#: utils/error_handler.py:49
+msgid "Sorry, there was an error. Try again later 🧡"
+msgstr "😔 Xin lỗi, đã có lỗi xảy ra. Hãy thử lại sau nhé 🧡"
+

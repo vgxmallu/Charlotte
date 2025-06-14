@@ -1,5 +1,5 @@
 # English translations for Charlotte.
-# Copyright (C) 2024 JellyTyan
+# Copyright (C) 2025 JellyTyan
 # This file is distributed under the same license as the Charlotte project.
 # JellyTyan lycomilopster@gmail.com, 2024.
 #
@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: Version\n"
 "Report-Msgid-Bugs-To: lycomilopster@gmail.com\n"
 "POT-Creation-Date: 2025-06-08 14:39+0200\n"
-"PO-Revision-Date: 2025-06-08 14:50+0200\n"
+"PO-Revision-Date: 2025-06-14 11:58+0200\n"
 "Last-Translator: JellyTyan\n"
 "Language-Team: en lycomilopster@gmail.com\n"
 "Language: en\n"
@@ -113,7 +113,10 @@ msgstr ""
 
 #: handlers/user/settings.py:33
 msgid "You have no rights to edit these settings!"
-msgstr "🙅‍♀️ Oops! You don’t have permission to edit these settings."
+msgstr ""
+"🙅‍♀️ Oops! You don’t have permission to edit these settings. If you are an "
+"administrator and posting on behalf of the channel, remove anonymity and try "
+"again."
 
 #: handlers/user/settings.py:52
 msgid "Pick a language!"

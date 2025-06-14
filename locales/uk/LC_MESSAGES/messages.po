@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: Version\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-06-08 14:39+0200\n"
-"PO-Revision-Date: 2025-06-08 14:50+0200\n"
+"PO-Revision-Date: 2025-06-14 11:59+0200\n"
 "Last-Translator: JellyTyan\n"
 "Language-Team: uk JellyTyan\n"
 "Language: uk\n"
@@ -120,7 +120,9 @@ msgstr ""
 
 #: handlers/user/settings.py:33
 msgid "You have no rights to edit these settings!"
-msgstr "🙅‍♀️ Ой! У тебе немає прав для зміни цих налаштувань."
+msgstr ""
+"🙅‍♀️ Ой! У тебе немає прав для зміни цих налаштувань. Якщо ви адміністратор і "
+"пишете від імені каналу, то приберіть анонімність і спробуйте знову."
 
 #: handlers/user/settings.py:52
 msgid "Pick a language!"

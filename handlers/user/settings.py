@@ -14,7 +14,6 @@ from aiogram.utils.i18n import gettext as _
 from filters.settings_filter import EmojiTextFilter
 from functions.db import db_change_lang
 from main import custom_i18n
-from utils.language_middleware import CustomI18nMiddleware
 from loader import dp
 
 
@@ -38,12 +37,14 @@ async def settings_command(message: Message, state: FSMContext) -> None:
     button_lang_rus = KeyboardButton(text="Russian 🇷🇺")
     button_lang_ukr = KeyboardButton(text="Ukrainian 🇺🇦")
     button_lang_pol = KeyboardButton(text="Polish 🇵🇱")
+    button_lang_vi = KeyboardButton(text="Vietnamese 🇻🇳")
     button_cancel = KeyboardButton(text="Cancel ❌")
 
     language_keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [button_lang_eng, button_lang_ukr],
             [button_lang_rus, button_lang_pol],
+            [button_lang_vi],
             [button_cancel],
         ],
         resize_keyboard=True,
@@ -58,7 +59,6 @@ async def process_settings_english(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "en")
 
-    # Сбрасываем кэш языка в middleware
     custom_i18n.clear_cache(message.chat.id)
 
     await message.answer(
@@ -70,9 +70,9 @@ async def process_settings_english(message: Message, state: FSMContext) -> None:
 async def process_settings_russian(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "ru")
-    
+
     custom_i18n.clear_cache(message.chat.id)
-    
+
     await message.answer(
         "Ваш язык сменён на русский", reply_markup=ReplyKeyboardRemove()
     )
@@ -82,9 +82,9 @@ async def process_settings_russian(message: Message, state: FSMContext) -> None:
 async def process_settings_ukrainian(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "uk")
-    
+
     custom_i18n.clear_cache(message.chat.id)
-    
+
     await message.answer(
         "Ваша мова зміннена на українську", reply_markup=ReplyKeyboardRemove()
     )
@@ -94,11 +94,23 @@ async def process_settings_ukrainian(message: Message, state: FSMContext) -> Non
 async def process_settings_polish(message: Message, state: FSMContext) -> None:
     await state.clear()
     await db_change_lang(message.chat.id, "pl")
-    
+
     custom_i18n.clear_cache(message.chat.id)
-    
+
     await message.answer(
         "Twój język został zmieniony na Polski", reply_markup=ReplyKeyboardRemove()
+    )
+
+
+@dp.message(Settings.language, EmojiTextFilter("Vietnamese 🇻🇳"))
+async def process_settings_vietnamese(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await db_change_lang(message.chat.id, "vi")
+
+    custom_i18n.clear_cache(message.chat.id)
+
+    await message.answer(
+        "🌸 Ngôn ngữ của bạn đã được chuyển sang tiếng Việt rồi nè!", reply_markup=ReplyKeyboardRemove()
     )
 
 
@@ -121,7 +133,8 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
 
 async def check_if_admin_or_owner(bot: Bot, chat_id: int, user_id: int) -> bool:
     chat_member = await bot.get_chat_member(chat_id, user_id)
-    return chat_member.is_anonymous or chat_member.status in [
-        ChatMemberStatus.ADMINISTRATOR,
-        ChatMemberStatus.CREATOR,
-    ]
+
+    if chat_member.status in [ChatMemberStatus.CREATOR, ChatMemberStatus.ADMINISTRATOR]:
+        return True
+    else:
+        return False
