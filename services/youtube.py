@@ -15,6 +15,7 @@ from models.media_models import MediaContent, MediaType
 from services.base_service import BaseService
 from utils import random_cookie_file, update_metadata
 from utils.error_handler import BotError, ErrorCode
+from config.settings import LOCAL_SERVER
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +220,8 @@ class YouTubeService(BaseService):
             'force_ipv4': True,
             'quiet': True,
         }
+        if LOCAL_SERVER:
+            max_size_mb = 100
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 loop = asyncio.get_running_loop()
@@ -356,6 +359,8 @@ class YouTubeService(BaseService):
             'quiet': True,
             "format": "ba[filesize<50M][acodec^=mp4a]/ba[filesize<50M][acodec=opus]/best[filesize<50M]"
         }
+        if LOCAL_SERVER:
+            ydl_opts["format"] = "ba[filesize<100M][acodec^=mp4a]/ba[filesize<100M][acodec=opus]/best[filesize<100M]"
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 loop = asyncio.get_running_loop()
