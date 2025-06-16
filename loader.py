@@ -10,7 +10,7 @@ from config.settings import LOCAL_SERVER
 # Initialize the Telegram bot with the given token and parse mode set to HTML
 if LOCAL_SERVER:
     session = AiohttpSession(
-        api=TelegramAPIServer.from_base('http://localhost:8082')
+        api=TelegramAPIServer.from_base(LOCAL_SERVER)
     )
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML), session=session)
 else:
