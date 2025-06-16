@@ -219,6 +219,7 @@ class YouTubeService(BaseService):
             'skip_download': True,
             'force_ipv4': True,
             'quiet': True,
+            "cookiefile": random_cookie_file(),
         }
         if LOCAL_SERVER:
             max_size_mb = 100
@@ -357,7 +358,8 @@ class YouTubeService(BaseService):
             'skip_download': True,
             'force_ipv4': True,
             'quiet': True,
-            "format": "ba[filesize<50M][acodec^=mp4a]/ba[filesize<50M][acodec=opus]/best[filesize<50M]"
+            "format": "ba[filesize<50M][acodec^=mp4a]/ba[filesize<50M][acodec=opus]/best[filesize<50M]",
+            "cookiefile": random_cookie_file(),
         }
         if LOCAL_SERVER:
             ydl_opts["format"] = "ba[filesize<100M][acodec^=mp4a]/ba[filesize<100M][acodec=opus]/best[filesize<100M]"
