@@ -17,6 +17,11 @@
   </p>
 </div>
 
+> ⚠️ **This repository is no longer actively maintained.**  
+> It remains available as a reference and open archive for those who want to explore or reuse its code.  
+> Charlotte continues to evolve in private development.
+> You can always use it for free. @ZefirkaFox_Bot
+
 If you like this repository, feel free to leave a star ⭐ to motivate me improve!
 
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=JellyTyan&repo=Charlotte&theme=tokyonight)](https://github.com/JellyTyan/Charlotte)
@@ -96,3 +101,6 @@ python3 main.py
 [![Contact on Telegram](https://img.shields.io/badge/Contact-Telegram-blue?logo=telegram)](https://t.me/charlottesbasement)
 
 [Basement](https://t.me/charlottesbasement) - Charlotte's Basement, where she tells all change logs or service status.
+
+Charlotte is developed and maintained by @JellyTyan.  
+This repository is provided as-is for reference and learning purposes.
